@@ -1,0 +1,10 @@
+{
+  "id": "bezienswaardigheden",
+  "type": "class",
+  "title": "Bezienswaardigheden",
+  "description": "Bezienswaardigheden",
+  "ams.auth": null,
+  "schema": {
+    "$ref": "bezienswaardigheden.objects.json"
+  }
+}

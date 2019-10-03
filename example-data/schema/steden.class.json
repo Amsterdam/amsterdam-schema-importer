@@ -1,0 +1,10 @@
+{
+  "id": "steden",
+  "type": "class",
+  "title": "Steden",
+  "description": "Steden",
+  "ams.auth": null,
+  "schema": {
+    "$ref": "steden.objects.json"
+  }
+}

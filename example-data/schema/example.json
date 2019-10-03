@@ -1,0 +1,19 @@
+{
+  "id": "example",
+  "type": "dataset",
+  "title": "Example dataset",
+  "description": "This is an example dataset",
+  "language": "nl",
+  "auth": null,
+  "items": [
+    {
+      "$ref": "provincies.class@v0.1"
+    },
+    {
+      "$ref": "steden.class@v0.1"
+    },
+    {
+      "$ref": "bezienswaardigheden.class@v0.1"
+    }
+  ]
+}

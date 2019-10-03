@@ -1,0 +1,10 @@
+{
+  "id": "provincies",
+  "type": "class",
+  "title": "Provincies",
+  "description": "Provincies",
+  "auth": null,
+  "schema": {
+    "$ref": "provincies.objects.json"
+  }
+}

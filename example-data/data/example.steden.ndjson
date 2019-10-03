@@ -1,0 +1,8 @@
+{"id":"amsterdam","class":"steden","dataset":"example","name":"Amsterdam","ligtInProvincie":"noord-holland","heeftBezienswaardigheden":["kerk","rivier","museum","winkels"],"geometry":{"type":"Point","coordinates":[4.922,52.362]}}
+{"id":"haarlem","class":"steden","dataset":"example","name":"Haarlem","ligtInProvincie":"noord-holland","heeftBezienswaardigheden":["kerk","rivier","museum","strand","winkels"],"geometry":{"type":"Point","coordinates":[4.63683,52.38111]}}
+{"id":"utrecht","class":"steden","dataset":"example","name":"Utrecht","ligtInProvincie":"utrecht","heeftBezienswaardigheden":["kerk","rivier","museum","winkels"],"geometry":{"type":"Point","coordinates":[5.12194,52.09094]}}
+{"id":"den-haag","class":"steden","dataset":"example","name":"Den Haag","ligtInProvincie":"zuid-holland","heeftBezienswaardigheden":["kerk","museum","strand","winkels"],"geometry":{"type":"Point","coordinates":[4.31233,52.08025]}}
+{"id":"rotterdam","class":"steden","dataset":"example","name":"Rotterdam","ligtInProvincie":"zuid-holland","heeftBezienswaardigheden":["kerk","rivier","museum","winkels"],"geometry":{"type":"Point","coordinates":[4.4777,51.9244]}}
+{"id":"alkmaar","class":"steden","dataset":"example","name":"Alkmaar","ligtInProvincie":"noord-holland","heeftBezienswaardigheden":["kerk","museum","winkels","kaas"],"geometry":{"type":"Point","coordinates":[4.75229,52.62989]}}
+{"id":"almelo","class":"steden","dataset":"example","name":"Almelo","ligtInProvincie":"overijssel","heeftBezienswaardigheden":[],"geometry":{"type":"Point","coordinates":[6.6609,52.3567]}}
+{"id":"assen","class":"steden","dataset":"example","name":"Assen","ligtInProvincie":"drenthe","heeftBezienswaardigheden":[],"geometry":{"type":"Point","coordinates":[6.5651,52.9955]}}

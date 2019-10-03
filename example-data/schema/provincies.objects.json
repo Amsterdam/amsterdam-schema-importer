@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ams-schema.glitch.me/dataset/example/provincies.objects@v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "dataset",
+    "class"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "https://ams-schema.glitch.me/schema@v0.1#/definitions/id",
+      "auth": ["public"]
+    },
+    "class": {
+      "$ref": "https://ams-schema.glitch.me/schema@v0.1#/definitions/class",
+      "auth": ["public"]
+    },
+    "dataset": {
+      "$ref": "https://ams-schema.glitch.me/schema@v0.1#/definitions/dataset",
+      "auth": ["public"]
+    },
+    "name": {
+      "type": "string",
+      "auth": ["public"]
+    }
+  }
+}
