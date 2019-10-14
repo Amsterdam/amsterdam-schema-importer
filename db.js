@@ -5,7 +5,7 @@ const pgp = require('pg-promise')({
 
 const util = require('./util')
 
-const connectionString = 'postgresql://postgres:@localhost:5432/postgres'
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:@localhost:5432/postgres'
 
 const db = pgp(connectionString)
 

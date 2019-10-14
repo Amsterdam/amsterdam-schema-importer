@@ -41,6 +41,8 @@ CREATE FUNCTION example.steden_intersects(id text)
 RETURNS SETOF example.steden AS $$
   SELECT * FROM example.steden
   WHERE
+  --
+  --
 $$ LANGUAGE sql STABLE;
 ~~~
 

@@ -1,0 +1,14 @@
+body {
+  margin: 0 auto;
+  width: 900px;
+  max-width: 100%;
+  background: white;
+  color: black;
+  font-family: Avenir;
+  line-height: 1.8;
+  font-size: 17px;
+}
+
+pre {
+  overflow-x: scroll;
+}

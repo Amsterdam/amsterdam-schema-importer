@@ -1,31 +1,131 @@
+const fs = require('fs')
+const path = require('path')
+const H = require('highland')
+const axios = require('axios')
+
 const toSnakeCase = (property) => property.replace(/\.?([A-Z]+)/g, '_$1').toLowerCase().replace(/^_/, '')
 
-const objOrRef = (files, obj) => {
+const importData = async (datasetName, compiledSchema, objectStream, db) => {
+  const classes = compiledSchema.items
+
+  const queries = classes.map((cls) => createTable(datasetName, cls))
+  const grants = grantStatements(compiledSchema)
+
+  const tables = classes.map((cls) => ({
+    schema: datasetName,
+    name: cls.id,
+    columns: Object.keys(cls.schema.properties)
+  }))
+
+  const createSql = `
+    DROP SCHEMA IF EXISTS ${datasetName} CASCADE;
+    CREATE SCHEMA ${datasetName};
+
+    ${queries.join('\n\n')}
+    ${grants.join('\n')}
+  `
+
+  const objects = H(objectStream)
+    .split()
+    .compact()
+    .map(JSON.parse)
+    .batch(100)
+
+  try {
+    const result = await db(createSql, tables, objects)
+    return result
+  } catch (err) {
+    throw err
+  }
+}
+
+const objOrRef = async (obj, basePath, isUrl) => {
   if (obj.$ref) {
-    return resolveSchema(files, obj.$ref)
+    const schema = await resolveSchema(obj.$ref, basePath, isUrl)
+    return schema
   } else {
     return obj
   }
 }
 
-const resolveSchema = (files, $ref) => {
-  $ref = $ref
-    .replace('@v0.1', '')
-    .replace('.json', '')
+const resolveSchema = async ($ref, basePath, isUrl) => {
+  if (isUrl) {
+    $ref = $ref
+      .replace('@v0.1', '')
+      .replace('.json', '')
+  } else {
+    $ref = $ref
+      .replace('@v0.1', '')
+    $ref = $ref.endsWith('.json') ? $ref : $ref + '.json'
+  }
 
-  return Object.entries(files).filter(([filename, schema]) => filename.replace('.json', '') === $ref)[0][1]
+  const schema = await fetchSchema($ref, basePath, isUrl)
+  return schema
 }
 
-const compileSchema = (files, schema) => {
-  function compile (schema) {
+const fetchSchema = async (filePath, basePath, isUrl) => {
+  let filename
+  if (isUrl) {
+    try {
+      filename = basePath + filePath
+      const response = await axios.get(filename)
+      return response.data
+    } catch (err) {
+      throw new Error(`Can't open URL: ${filename}`)
+    }
+  } else {
+    try {
+      filename = path.join(basePath, filePath)
+      return JSON.parse(fs.readFileSync(filename, 'utf8'))
+    } catch (err) {
+      throw new Error(`Can't open file: ${filename}`)
+    }
+  }
+}
+
+const compileSchema = async (schema, basePath) => {
+  let isUrl
+  try {
+    const url = new URL(basePath)
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      isUrl = true
+    } else {
+      throw new Error(`Invalid path/URL: ${basePath}`)
+    }
+  } catch (err) {
+    // basePath is a relative file path
+    isUrl = false
+  }
+
+  async function compile (s) {
+    const schema = s.schema && await objOrRef(s.schema, basePath, isUrl)
+    let items
+    try {
+      if (s.items) {
+        items = []
+        for (const itemOrRef of s.items) {
+          const item = await objOrRef(itemOrRef, basePath, isUrl)
+          const compiledItem = await compile(item)
+          items.push(compiledItem)
+        }
+      }
+    } catch (err) {
+      throw err
+    }
+
     return {
-      ...schema,
-      schema: schema.schema && objOrRef(files, schema.schema),
-      items: schema.items && schema.items.map((item) => objOrRef(files, item)).map(compile)
+      ...s,
+      schema,
+      items
     }
   }
 
-  return compile(schema)
+  try {
+    const compiledSchema = await compile(schema)
+    return compiledSchema
+  } catch (err) {
+    throw err
+  }
 }
 
 const createTable = (datasetName, cls) => {
@@ -113,5 +213,6 @@ module.exports = {
   compileSchema,
   createTable,
   grantStatements,
-  toSnakeCase
+  toSnakeCase,
+  importData
 }

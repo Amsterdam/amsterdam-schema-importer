@@ -20,5 +20,17 @@ services:
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
       ## uncomment next line to set an admin secret
       # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
+  nodejs:
+    image: node:12
+    ports:
+    - "8765:8080"
+    environment:
+    - PORT=8080
+    - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
+    - HASURA_URL=http://graphql-engine:8088/
+    command: node /app/server.js
+    volumes:
+    - ./:/app
+
 volumes:
   db_data:
