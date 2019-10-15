@@ -7,6 +7,17 @@ services:
     - "5432:5432"
     volumes:
     - db_data:/var/lib/postgresql/data
+  graphile:
+    image: graphile/postgraphile
+    ports:
+      - "5000:5000"
+    command: cli.js --connection postgres://postgres:@postgres:5432/postgres
+      --watch --enhance-graphiql  --simple-collections only
+      --schema asbestdaken,example,reclame
+      --skip-plugins graphile-build:NodePlugin
+    environment:
+      DATABASE_URL: postgres://postgres:@postgres:5432/postgres
+
   graphql-engine:
     image: hasura/graphql-engine:v1.0.0-beta.6
     ports:
@@ -27,7 +38,6 @@ services:
     environment:
     - PORT=8080
     - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
-    - HASURA_URL=http://graphql-engine:8088/
     command: node /app/server.js
     volumes:
     - ./:/app

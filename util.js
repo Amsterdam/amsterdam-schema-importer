@@ -14,6 +14,7 @@ const importData = async (datasetName, compiledSchema, objectStream, db) => {
   const tables = classes.map((cls) => ({
     schema: datasetName,
     name: cls.id,
+    crs: cls.crs || compiledSchema.crs,
     columns: Object.keys(cls.schema.properties)
   }))
 
@@ -32,7 +33,7 @@ const importData = async (datasetName, compiledSchema, objectStream, db) => {
     .batch(100)
 
   try {
-    const result = await db(createSql, tables, objects)
+    const result = await db.createAndBulkImport(createSql, tables, objects)
     return result
   } catch (err) {
     throw err

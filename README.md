@@ -14,7 +14,7 @@ Then, install Node.js dependencies:
 
 Finally, run the script with the example data & schema:
 
-    awk 1 ./example-data/data/*.ndjson | node index.js ./example-data/schema/*.json
+    awk 1 ./example-data/data/*.ndjson | node index.js ./example-data/schema/example.json
 
 ## Hasura
 

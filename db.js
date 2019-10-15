@@ -9,17 +9,23 @@ const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:@loc
 
 const db = pgp(connectionString)
 
-const makeGeometry = (col) => {
-  const geojson = col.value
-  if (geojson) {
-    return {
-      toPostgres: () => pgp.as.format('ST_SetSRID(ST_GeomFromGeoJSON($1), $2)', [geojson, 4326]),
-      rawType: true
+const DEFAULT_CRS = 28992
+
+const makeMakeGeometry = (crs) => {
+  const makeGeometry = (col) => {
+    const geojson = col.value
+    if (geojson) {
+      return {
+        toPostgres: () => pgp.as.format('ST_SetSRID(ST_GeomFromGeoJSON($1), $2)', [geojson, crs]),
+        rawType: true
+      }
     }
   }
+
+  return makeGeometry
 }
 
-module.exports = (createSql, tables, stream) => db.tx('transaction', async (tx) => {
+const createAndBulkImport = (createSql, tables, stream) => db.tx('transaction', async (tx) => {
   function nextBatch () {
     return new Promise((resolve, reject) => {
       stream.pull((err, batch) => {
@@ -35,15 +41,25 @@ module.exports = (createSql, tables, stream) => db.tx('transaction', async (tx) 
   const columnSets = Object.fromEntries(tables.map((table) => ([
     `${table.schema}.${table.name}`,
 
-    new pgp.helpers.ColumnSet(table.columns.map((column) => ({
-      name: util.toSnakeCase(column), // in DB
-      prop: column, // in source
-      // TODO: use actual type, not the column name!
-      ...(column === 'geometry' ? {
-        mod: ':raw',
-        init: makeGeometry
-      } : {})
-    })), {
+    new pgp.helpers.ColumnSet(table.columns.map((column) => {
+      let isGeometry = false
+      let makeGeometry
+      if (column === 'geometry') {
+        isGeometry = true
+        const crs = table.crs || DEFAULT_CRS
+        makeGeometry = makeMakeGeometry(crs)
+      }
+
+      return {
+        name: util.toSnakeCase(column), // in DB
+        prop: column, // in source
+        // TODO: use actual type, not the column name!
+        ...(isGeometry ? {
+          mod: ':raw',
+          init: makeGeometry
+        } : {})
+      }
+    }), {
       table: {
         schema: table.schema,
         table: table.name
@@ -73,3 +89,8 @@ module.exports = (createSql, tables, stream) => db.tx('transaction', async (tx) 
     }
   })
 })
+
+module.exports = {
+  db,
+  createAndBulkImport
+}

@@ -19,6 +19,7 @@ const port = process.env.PORT || 8765
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(fileUpload())
 app.use(cors())
+app.set('json spaces', 2)
 
 const schemasBaseUrl = 'https://ams-schema.glitch.me/dataset/'
 
@@ -94,6 +95,32 @@ app.get('/check-schema/:datasetId', async (req, res) => {
     // util.validate
 
     res.send(compiledSchema)
+  } catch (err) {
+    res.status(500).send(err.message)
+  }
+})
+
+app.get('/:datasetId/:classId', async (req, res) => {
+  const datasetId = req.params.datasetId
+  const classId = req.params.classId
+
+  const query = `
+  SELECT *, ST_AsGeoJSON(ST_Transform(geometry, 4326)) AS geometry
+  FROM $1~.$2~`
+
+  try {
+    const rows = await db.db.any(query, [datasetId, classId])
+    res.send({
+      type: 'FeatureCollection',
+      features: rows.map((row) => ({
+        type: 'Feature',
+        properties: {
+          ...row,
+          geometry: undefined
+        },
+        geometry: JSON.parse(row.geometry)
+      }))
+    })
   } catch (err) {
     res.status(500).send(err.message)
   }
