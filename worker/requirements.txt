@@ -1,1 +1,3 @@
 flask
+jsonref==0.2
+mappyfile
