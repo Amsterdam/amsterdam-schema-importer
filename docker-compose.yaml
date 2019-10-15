@@ -34,7 +34,7 @@ services:
   worker:
     build: ./worker
     environment:
-      FLASK_APP: app.py
+      FLASK_APP: web.py
     ports:
       - "5000:5000"
 
