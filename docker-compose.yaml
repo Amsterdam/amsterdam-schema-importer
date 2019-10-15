@@ -1,5 +1,6 @@
 version: '3.6'
 services:
+
   postgres:
     image: mdillon/postgis
     restart: always
@@ -7,6 +8,7 @@ services:
     - "5432:5432"
     volumes:
     - db_data:/var/lib/postgresql/data
+
   graphile:
     image: graphile/postgraphile
     ports:
@@ -18,19 +20,20 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:@postgres:5432/postgres
 
-  graphql-engine:
-    image: hasura/graphql-engine:v1.0.0-beta.6
-    ports:
-    - "8088:8080"
-    depends_on:
-    - "postgres"
-    restart: always
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:@postgres:5432/postgres
-      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
-      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
-      ## uncomment next line to set an admin secret
-      # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
+  # graphql-engine:
+  #   image: hasura/graphql-engine:v1.0.0-beta.6
+  #   ports:
+  #   - "8088:8080"
+  #   depends_on:
+  #   - "postgres"
+  #   restart: always
+  #   environment:
+  #     HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:@postgres:5432/postgres
+  #     HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
+  #     HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+  #     ## uncomment next line to set an admin secret
+  #     # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
+
   nodejs:
     image: node:12
     ports:
@@ -41,12 +44,13 @@ services:
     command: node /app/server.js
     volumes:
     - ./:/app
+
   worker:
     build: ./worker
     environment:
-      FLASK_APP: web.py
+      FLASK_APP: app.py
     ports:
-      - "5000:5000"
+      - "5001:5000"
 
 volumes:
   db_data:
