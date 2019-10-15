@@ -50,7 +50,11 @@ services:
     environment:
       FLASK_APP: app.py
     ports:
-      - "5001:5000"
+      - "5000:5000"
+  mapserver:
+    build: ./mapserver
+    volumes: 
+      - ./:/etc/mapserver
 
 volumes:
   db_data:
