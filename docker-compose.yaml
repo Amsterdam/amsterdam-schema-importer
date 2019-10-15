@@ -41,6 +41,12 @@ services:
     command: node /app/server.js
     volumes:
     - ./:/app
+  worker:
+    build: ./worker
+    environment:
+      FLASK_APP: app.py
+    ports:
+      - "5000:5000"
 
 volumes:
   db_data:
