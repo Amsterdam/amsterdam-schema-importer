@@ -1,7 +1,23 @@
-from flask import Flask
-app = Flask(__name__)
+import logging
+import os
+import typing
+
+from .interfaces import amsterdam_schema
+from .generators.mapfile import (
+    MapfileGenerator
+)
+from .interfaces.mapfile.serializers import (
+    MappyfileSerializer
+)
 
 
-@app.route('/mapfiles', methods=['POST'])
-def create_mapfile():
-    return 'Hello, World!'
+log = logging.getLogger(__name__)
+
+
+def main(dataset_json):
+    dataset = amsterdam_schema.AmsterdamSchema(dataset_json)
+    return MapfileGenerator(
+        map_dir="notused",
+        serializer=MappyfileSerializer(),
+        datasets=[]
+    ).serialize(dataset)
