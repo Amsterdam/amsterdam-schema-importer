@@ -1,0 +1,36 @@
+{
+    "id": "steden_geo",
+    "web": {
+        "metadata": {
+            "ows_abstract": "Steden",
+            "ows_title": "steden"
+        }
+    },
+    "layers": {
+        "steden": {
+            "field": "geometry",
+            "dataset_class": "steden",
+            "metadata": {
+                "ows_title": "Steden",
+                "ows_group_title": "steden",
+                "ows_enable_request": "*",
+                "wms_extent": "100000 450000 150000 500000"
+            },
+            "base_label": [
+                {
+                    "minscaledenom": 10,
+                    "maxscaledenom": 10000,
+                    "color": [0, 0, 0],
+                    "outlinecolor": [255, 255, 255],
+                    "outlinewidth": 3,
+                    "font": "Ubuntu-MI",
+                    "type": "truetype",
+                    "size": 10,
+                    "position": "AUTO",
+                    "partials": "FALSE",
+                    "offset": [-60, 10]
+                }
+            ]
+        }
+    }
+}
