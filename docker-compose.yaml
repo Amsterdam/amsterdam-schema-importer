@@ -37,6 +37,10 @@ services:
       FLASK_APP: web.py
     ports:
       - "5000:5000"
+  mapserver:
+    build: ./mapserver
+    volumes: 
+      - ./:/etc/mapserver
 
 volumes:
   db_data:
