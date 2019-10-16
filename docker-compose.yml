@@ -41,6 +41,8 @@ services:
     environment:
     - PORT=8080
     - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
+    - WORKER_URL=http://worker:8766/mapfiles
+
     command: node /app/server.js
     volumes:
     - ./:/app
@@ -50,12 +52,14 @@ services:
     environment:
       FLASK_APP: web.py
     ports:
-      - "8766:5000"
+      - "8766:8766"
 
   mapserver:
     build: ./mapserver
     volumes:
-      - ./mapfiles:/etc/mapserver
+      - ./mapserver:/srv/mapserver
+    ports:
+      - "80:80"
 
 volumes:
   db_data:

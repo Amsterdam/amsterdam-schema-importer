@@ -55,6 +55,8 @@ class MapfileGenerator(Generator):
     def generate_layer(self, dataset, name, layer_dict) -> types.Layer:
         styles = layer_dict.get('base_styles', [])
         features = layer_dict.get('features', [])
+        srid_str = dataset.get('crs', 'EPSG:28992')
+        srid = int(srid_str.split(':')[-1])
 
         layer = types.Layer(
             name=name,
@@ -64,7 +66,7 @@ class MapfileGenerator(Generator):
             include=["connection_various_small_datasets.inc"],
             data=[types.Data.for_postgres(
                 layer_dict['field'], layer_dict['dataset_class'],
-                srid=28992, UNIQUE="ogc_fid"
+                srid=srid, UNIQUE="id"
             )],
             metadata=types.Metadata(layer_dict.get('metadata', {}))
         )

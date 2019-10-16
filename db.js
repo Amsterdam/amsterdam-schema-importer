@@ -46,7 +46,7 @@ const createAndBulkImport = (createSql, tables, stream) => db.tx('transaction', 
       let makeGeometry
       if (column === 'geometry') {
         isGeometry = true
-        const crs = table.crs || DEFAULT_CRS
+        const crs = parseInt(table.crs.replace('EPSG:', '')) || DEFAULT_CRS
         makeGeometry = makeMakeGeometry(crs)
       }
 

@@ -15,6 +15,7 @@ const db = require('./db')
 const dataPath = path.join(__dirname, 'data')
 
 const port = process.env.PORT || 8765
+const workerUrl = process.env.WORKER_URL || 'http://localhost:8766/mapfiles'
 
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(fileUpload())
@@ -40,13 +41,30 @@ app.post('/import/:datasetId', async (req, res) => {
     return
   }
 
-  util.importData(datasetId, compiledSchema, objectStream, db)
-    .then(() => {
-      res.send('Done')
+  try {
+    const response = await axios({
+      url: workerUrl,
+      method: 'POST',
+      data: compiledSchema
     })
-    .catch((err) => {
-      res.status(500).send(`Error executing SQL queries: ${err.message}`)
-    })
+
+    const mapfileDir = path.join(__dirname, 'mapserver')
+    const mapfileFilename = path.join(mapfileDir, `asbestdaken.daken.map`)
+    const mapfile = response.data
+    fs.writeFileSync(mapfileFilename, mapfile, 'utf8')
+  } catch (err) {
+    console.error(`Error sending data to worker: ${err.message}`)
+    res.status(500).send(err.message)
+    return
+  }
+
+  try {
+    await util.importData(datasetId, compiledSchema, objectStream, db)
+    res.send('Done')
+  } catch (err) {
+    console.error(err.message)
+    res.status(500).send(`Error executing SQL queries: ${err.message}`)
+  }
 })
 
 app.post('/upload/:datasetId', async (req, res, next) => {
