@@ -111,6 +111,6 @@ class Web:
 class Mapfile:
     name: str
     layers: typing.List[Layer]
-    projection: typing.List[str]
+    projection: typing.Optional[typing.List[str]] = None
     include: typing.List[Filename] = field(default_factory=list)
     web: typing.Optional[Web] = None
