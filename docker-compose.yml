@@ -5,7 +5,7 @@ services:
     image: mdillon/postgis
     restart: always
     ports:
-    - "5432:5432"
+    - "5434:5432"
     volumes:
     - db_data:/var/lib/postgresql/data
 
@@ -15,7 +15,7 @@ services:
       - "5000:5000"
     command: cli.js --connection postgres://postgres:@postgres:5432/postgres
       --watch --enhance-graphiql  --simple-collections only
-      --schema asbestdaken,example,reclame
+      --schema asbestdaken,example,reclame,sportparken
       --skip-plugins graphile-build:NodePlugin
     environment:
       DATABASE_URL: postgres://postgres:@postgres:5432/postgres
@@ -59,7 +59,20 @@ services:
     volumes:
       - ./mapserver:/srv/mapserver
     ports:
-      - "80:80"
+      - "8090:80"
+
+  dynapi:
+    build: ./dynapi
+    environment:
+      FLASK_APP: api.py
+    ports:
+      - "6543:6543"
+    command:
+      # sleep infinity
+      gunicorn api:app -w 2 -b 0.0.0.0:6543
+    volumes:
+    - ./dynapi:/dynapi
+    - ./data:/data
 
 volumes:
   db_data:

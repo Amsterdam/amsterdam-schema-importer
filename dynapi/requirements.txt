@@ -1,0 +1,6 @@
+Flask
+Flask-API
+Flask-SACore
+psycopg2
+SQLAlchemy
+gunicorn
