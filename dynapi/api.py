@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from flask import abort
@@ -9,8 +10,6 @@ from flask_sacore import SACore
 from dataservices import amsterdam_schema as aschema
 
 
-import json
-
 app = FlaskAPI(__name__)
 
 db = SACore("postgres://postgres:@postgres:5432/postgres", app)
@@ -20,23 +19,14 @@ URI_VERSION_PREFIX = "latest"
 
 
 class Type(aschema.Dataset):
-
-    # def __init__(self, schema):
-    #     self.type_name = schema["id"]
-    #     self.classes = {}
-    #     for item in schema["items"]:
-    #         class_name = item["id"]
-    #         self.classes[class_name] = Class(item["schema"])
-
     def __init__(self, *args, **kwargs):
-        super().__init__()
-        self.class_lookup = {cls["id"]: cls for cls in self.classes}
-        self.primary_names = {cls["id"] : self.primary_name(cls) for cls in self.classes}
+        super().__init__(*args, **kwargs)
+        self.primary_names = {cls["id"]: self.primary_name(cls) for cls in self.classes}
 
     def primary_name(self, cls):
         id_fields = [
             k.lower()
-            for k, v in cls["properties"].items()
+            for k, v in cls["schema"]["properties"].items()
             if "$ref" in v and v["$ref"] == ID_REF
         ]
         return id_fields and id_fields[0] or None
@@ -48,7 +38,7 @@ class Type(aschema.Dataset):
 
     def all(self, cls_name):
         def handler():
-            sql = f"SELECT * FROM {self.type_name}.{cls_name}"
+            sql = f"SELECT * FROM {self.name}.{cls_name}"
             result = db.con.execute(sql)
             rows = [
                 {
@@ -56,9 +46,7 @@ class Type(aschema.Dataset):
                     **{
                         "_links": {
                             "self": self._links(
-                                self.type_name,
-                                cls_name,
-                                row[self.primary_names[cls_name]],
+                                self.name, cls_name, row[self.primary_names[cls_name]]
                             )
                         }
                     },
@@ -72,13 +60,13 @@ class Type(aschema.Dataset):
     def one(self, cls_name):
         def handler(cls_id):
             primary_name = self.primary_names[cls_name]
-            sql = f"SELECT * FROM {self.type_name}.{cls_name} WHERE {primary_name} = %s"
+            sql = f"SELECT * FROM {self.name}.{cls_name} WHERE {primary_name} = %s"
             rows = [dict(row) for row in db.con.execute(sql, (cls_id,))]
             if not rows:
                 abort(404)
             return {
                 **rows[0],
-                **{"_links": {"self": self._links(self.type_name, cls_name, cls_id)}},
+                **{"_links": {"self": self._links(self.name, cls_name, cls_id)}},
             }
 
         return handler
@@ -87,13 +75,15 @@ class Type(aschema.Dataset):
 def make_spec(types):
     def spec():
         paths = {}
+        prefix = URI_VERSION_PREFIX
         for t in types:
-            for cls_name, cls in t.classes.items():
+            for cls in t.classes:
+                cls_name = cls["id"]
                 primary_name = t.primary_names[cls_name]
-                paths[f"/{t.type_name}/{cls_name}/{{cls_id}}"] = {
+                paths[f"/{prefix}/{t.name}/{cls_name}/{{cls_id}}"] = {
                     "get": {"parameters": [{"name": primary_name, "in": "path"}]}
                 }
-                paths[f"/{t.type_name}/{cls_name}"] = {
+                paths[f"/{prefix}/{t.name}/{cls_name}"] = {
                     "get": {"description": "Get all"}
                 }
         return {"openapi": "3.0.0", "paths": paths}
@@ -109,21 +99,22 @@ def make_routes(path):
         schema = json.load(open(schema_file))
         t = Type(schema)
         types.append(t)
-        for cls_name, cls in t.classes.items():
+        for cls in t.classes:
+            cls_name = cls["id"]
             app.add_url_rule(
-                f"/{prefix}/{t.type_name}/{cls_name}/<cls_id>",
-                f"{t.type_name}_{cls_name}_id",
+                f"/{prefix}/{t.name}/{cls_name}/<cls_id>",
+                f"{t.name}_{cls_name}_id",
                 t.one(cls_name),
             )
             app.add_url_rule(
-                f"/{prefix}/{t.type_name}/{cls_name}",
-                f"{t.type_name}_{cls_name}",
+                f"/{prefix}/{t.name}/{cls_name}",
+                f"{t.name}_{cls_name}",
                 t.all(cls_name),
             )
     app.add_url_rule("/spec", "openapi-spec", make_spec(types))
 
 
-make_routes("/data")
+make_routes("./data")
 
 
 @app.route("/")

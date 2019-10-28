@@ -7,11 +7,11 @@ class Dataset(UserDict):
     @property
     def name(self):
         return self['id']
- 
+
     @property
     def crs(self) -> str:
         return self.get('crs', self.DEFAULT_CRS)
-           
+
     @property
     def classes(self):
         return [
