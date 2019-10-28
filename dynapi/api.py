@@ -6,6 +6,8 @@ from flask import render_template
 from flask_api import FlaskAPI
 from flask_sacore import SACore
 
+from dataservices import amsterdam_schema as aschema
+
 
 import json
 
@@ -17,28 +19,27 @@ ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
 URI_VERSION_PREFIX = "latest"
 
 
-class Class:
-    def __init__(self, schema):
-        self.properties = schema["properties"]
+class Type(aschema.Dataset):
+
+    # def __init__(self, schema):
+    #     self.type_name = schema["id"]
+    #     self.classes = {}
+    #     for item in schema["items"]:
+    #         class_name = item["id"]
+    #         self.classes[class_name] = Class(item["schema"])
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.class_lookup = {cls["id"]: cls for cls in self.classes}
+        self.primary_names = {cls["id"] : self.primary_name(cls) for cls in self.classes}
+
+    def primary_name(self, cls):
         id_fields = [
             k.lower()
-            for k, v in self.properties.items()
+            for k, v in cls["properties"].items()
             if "$ref" in v and v["$ref"] == ID_REF
         ]
-        self.primary_name = id_fields and id_fields[0] or None
-
-
-class Type:
-    def __init__(self, schema):
-        # set fields
-        # set primary key
-        # set all()  (class method)
-        # set get(id)
-        self.type_name = schema["id"]
-        self.classes = {}
-        for item in schema["items"]:
-            class_name = item["id"]
-            self.classes[class_name] = Class(item["schema"])
+        return id_fields and id_fields[0] or None
 
     def _links(self, type_name, cls_name, id_=None):
         tail = "" if id_ is None else f"/{id_}"
@@ -57,7 +58,7 @@ class Type:
                             "self": self._links(
                                 self.type_name,
                                 cls_name,
-                                row[self.classes[cls_name].primary_name],
+                                row[self.primary_names[cls_name]],
                             )
                         }
                     },
@@ -70,7 +71,7 @@ class Type:
 
     def one(self, cls_name):
         def handler(cls_id):
-            primary_name = self.classes[cls_name].primary_name
+            primary_name = self.primary_names[cls_name]
             sql = f"SELECT * FROM {self.type_name}.{cls_name} WHERE {primary_name} = %s"
             rows = [dict(row) for row in db.con.execute(sql, (cls_id,))]
             if not rows:
@@ -88,8 +89,9 @@ def make_spec(types):
         paths = {}
         for t in types:
             for cls_name, cls in t.classes.items():
+                primary_name = t.primary_names[cls_name]
                 paths[f"/{t.type_name}/{cls_name}/{{cls_id}}"] = {
-                    "get": {"parameters": [{"name": cls.primary_name, "in": "path"}]}
+                    "get": {"parameters": [{"name": primary_name, "in": "path"}]}
                 }
                 paths[f"/{t.type_name}/{cls_name}"] = {
                     "get": {"description": "Get all"}
@@ -114,7 +116,7 @@ def make_routes(path):
                 t.one(cls_name),
             )
             app.add_url_rule(
-                f"/{{prefix}/t.type_name}/{cls_name}",
+                f"/{prefix}/{t.type_name}/{cls_name}",
                 f"{t.type_name}_{cls_name}",
                 t.all(cls_name),
             )
