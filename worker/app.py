@@ -3,7 +3,8 @@ import os
 import sys
 import typing
 
-from .interfaces import amsterdam_schema, json_
+from dataservices import amsterdam_schema
+from .interfaces import json_
 from .generators.mapfile import (
     MapfileGenerator
 )
