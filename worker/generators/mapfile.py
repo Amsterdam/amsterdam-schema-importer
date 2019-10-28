@@ -2,7 +2,7 @@ from collections import ChainMap
 from dataclasses import dataclass
 import typing
 
-from ..interfaces import amsterdam_schema as schema
+from dataservices import amsterdam_schema as schema
 from ..interfaces.mapfile import types, serializers
 
 
