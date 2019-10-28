@@ -14,6 +14,7 @@ app = FlaskAPI(__name__)
 db = SACore("postgres://postgres:@postgres:5432/postgres", app)
 
 ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
+URI_VERSION_PREFIX = "latest"
 
 
 class Class:
@@ -100,6 +101,7 @@ def make_spec(types):
 
 def make_routes(path):
     p = Path(path)
+    prefix = URI_VERSION_PREFIX
     types = []
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
@@ -107,12 +109,12 @@ def make_routes(path):
         types.append(t)
         for cls_name, cls in t.classes.items():
             app.add_url_rule(
-                f"/{t.type_name}/{cls_name}/<cls_id>",
+                f"/{prefix}/{t.type_name}/{cls_name}/<cls_id>",
                 f"{t.type_name}_{cls_name}_id",
                 t.one(cls_name),
             )
             app.add_url_rule(
-                f"/{t.type_name}/{cls_name}",
+                f"/{{prefix}/t.type_name}/{cls_name}",
                 f"{t.type_name}_{cls_name}",
                 t.all(cls_name),
             )

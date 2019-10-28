@@ -53,12 +53,13 @@ app.post('/import/:datasetId', async (req, res) => {
     const mapfile = response.data
     fs.writeFileSync(mapfileFilename, mapfile, 'utf8')
   } catch (err) {
-    console.error(`Error sending data to worker: ${err.message}`)
-    res.status(500).send(err.message)
-    return
+    console.error(`Error sending dadddta to worker: ${err.message}`)
+    // res.status(500).send(err.message)
+    // return
   }
 
   try {
+    console.error('Starting improt')
     await util.importData(datasetId, compiledSchema, objectStream, db)
     res.send('Done')
   } catch (err) {
