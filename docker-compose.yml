@@ -64,7 +64,7 @@ services:
   dynapi:
     build: ./dynapi
     environment:
-      FLASK_APP: api.py
+      - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
     ports:
       - "6543:6543"
     command:
