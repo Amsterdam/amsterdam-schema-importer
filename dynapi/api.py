@@ -1,5 +1,9 @@
+from os import environ
 import json
 from pathlib import Path
+
+from pint import UnitRegistry
+from pint.errors import UndefinedUnitError
 
 from flask import abort
 from flask import request
@@ -9,13 +13,18 @@ from flask_sacore import SACore
 
 from dataservices import amsterdam_schema as aschema
 
+LAT_LON_SRID = 4269
+RD_SRID = 28992
 
 app = FlaskAPI(__name__)
 
-db = SACore("postgres://postgres:@postgres:5432/postgres", app)
+dsn = environ['DATABASE_URL']
+routes_root_dir = environ['ROUTES_ROOT_DIR']
+db = SACore(dsn, app)
 
 ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
 URI_VERSION_PREFIX = "latest"
+ureg = UnitRegistry()
 
 
 class Type(aschema.Dataset):
@@ -37,9 +46,27 @@ class Type(aschema.Dataset):
         return {"href": f"{request.host_url}{type_name}/{cls_name}{tail}"}
 
     def all(self, cls_name):
-        def handler():
-            sql = f"SELECT * FROM {self.name}.{cls_name}"
-            result = db.con.execute(sql)
+
+        def fetch_clause_and_args():
+            if "near" not in request.args.keys():
+                return "WHERE 1 = 1", ()
+
+            try:
+                near = [float(a) for a in request.args.get("near").split(",")]
+                distance = ureg.parse_expression(request.args.get("distance")).to(ureg.meter).magnitude
+                rsid_near_coords = int(request.args.get("rsid", LAT_LON_SRID))
+            except (ValueError, UndefinedUnitError):
+                # XXX How specific should error messages be?
+                abort(400)
+
+            where_clause = f"""
+                WHERE ST_DWithin(geometry, ST_Transform(ST_GeomFromText('POINT(%s %s)', %s), %s), %s)
+                """
+            return where_clause, (near + [rsid_near_coords, RD_SRID, distance])
+
+        def all_handler(where_clause, qargs):
+            sql = f"SELECT * FROM {self.name}.{cls_name} {where_clause}"
+            result = db.con.execute(sql, qargs)
             rows = [
                 {
                     **dict(row),
@@ -54,6 +81,9 @@ class Type(aschema.Dataset):
                 for row in result
             ]
             return dict(data=rows)
+
+        def handler():
+            return all_handler(*fetch_clause_and_args())
 
         return handler
 
@@ -114,7 +144,7 @@ def make_routes(path):
     app.add_url_rule("/spec", "openapi-spec", make_spec(types))
 
 
-make_routes("./data")
+make_routes(routes_root_dir)
 
 
 @app.route("/")
