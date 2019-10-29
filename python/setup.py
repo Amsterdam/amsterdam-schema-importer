@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 def main(setup_func=setup):
     install_requires = [
@@ -12,8 +12,9 @@ def main(setup_func=setup):
 
 
     setup_func(
+        version="0.0.2",
         name='dataservices',
-        packages=['dataservices'],
+        packages=find_packages(),
         install_requires=install_requires,
         test_require=test_requires,
         extras_require={
