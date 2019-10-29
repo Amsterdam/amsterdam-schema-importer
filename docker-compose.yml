@@ -65,6 +65,7 @@ services:
     build: ./dynapi
     environment:
       - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
+      - ROUTES_ROOT_DIR=/data
     ports:
       - "6543:6543"
     command:
