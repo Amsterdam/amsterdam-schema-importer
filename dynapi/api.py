@@ -42,8 +42,9 @@ class Type(aschema.Dataset):
 
     def _links(self, type_name, cls_name, id_=None):
         tail = "" if id_ is None else f"/{id_}"
+        prefix = URI_VERSION_PREFIX
 
-        return {"href": f"{request.host_url}{type_name}/{cls_name}{tail}"}
+        return {"href": f"{request.host_url}{prefix}/{type_name}/{cls_name}{tail}"}
 
     def all(self, cls_name):
 
