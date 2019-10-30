@@ -1,6 +1,8 @@
 from os import environ
 from flask import Flask
+from flask_cors import CORS
 from flask_sacore import SACore
+
 
 dsn = environ["DATABASE_URL"]
 
@@ -20,6 +22,7 @@ def app_factory():
     from .api import api  # NoQA
 
     app = DynAPI(__name__)
+    CORS(app)
     app.register_blueprint(api)
     app.config["DEFAULT_RENDERERS"] = [
         "flask_api.renderers.JSONRenderer",

@@ -14,18 +14,16 @@ from flask import render_template
 
 from dataservices import amsterdam_schema as aschema
 
-# from .app import DynAPI
-
 LAT_LON_SRID = 4326
 DB_SRID = 28992
 
 
-# app = DynAPI(__name__)
 api = Blueprint("v1", __name__)
 
 routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
 ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
+uri_path = environ["URI_PATH"]
 URI_VERSION_PREFIX = "latest"
 ureg = UnitRegistry()
 
@@ -45,9 +43,9 @@ class Type(aschema.Dataset):
 
     def _links(self, type_name, cls_name, id_=None):
         tail = "" if id_ is None else f"/{id_}"
-        prefix = URI_VERSION_PREFIX
+        prefix = f"{uri_path}{URI_VERSION_PREFIX}"
 
-        return {"href": f"{request.host_url}{prefix}/{type_name}/{cls_name}{tail}"}
+        return {"href": f"{prefix}/{type_name}/{cls_name}{tail}"}
 
     def all(self, cls_name, extension="json"):
         def fetch_clause_and_args():
@@ -85,7 +83,7 @@ class Type(aschema.Dataset):
                         **dict(row),
                         "_links": {
                             "self": self._links(
-                                self.name, cls_name, row[self.primary_names[cls_name]]
+                                self.name, cls_name, row[self.primary_names[cls_name].lower()]
                             )
                         },
                         "geometry": json.loads(row["geometry"]),
@@ -164,7 +162,7 @@ class Type(aschema.Dataset):
 def make_spec(types):
     def spec():
         paths = {}
-        prefix = URI_VERSION_PREFIX
+        prefix = f"{uri_path}{URI_VERSION_PREFIX}"
         info = {"title": "OpenAPI Amsterdam Schema", "version": "0.0.1"}
         for t in types:
             for cls in t.classes:
@@ -173,7 +171,7 @@ def make_spec(types):
                 primary_name_description = cls["schema"]["properties"][primary_name][
                     "description"
                 ]
-                paths[f"/{prefix}/{t.name}/{cls_name}/{{cls_id}}"] = {
+                paths[f"{prefix}/{t.name}/{cls_name}/{{cls_id}}"] = {
                     "get": {
                         "parameters": [
                             {
@@ -185,7 +183,7 @@ def make_spec(types):
                         ]
                     }
                 }
-                paths[f"/{prefix}/{t.name}/{cls_name}"] = {
+                paths[f"{prefix}/{t.name}/{cls_name}"] = {
                     "get": {"description": t["title"]}
                 }
         return jsonify({"openapi": "3.0.0", "paths": paths, "info": info})
@@ -195,7 +193,7 @@ def make_spec(types):
 
 def make_routes(path):
     p = Path(path)
-    prefix = URI_VERSION_PREFIX
+    prefix = f"/{URI_VERSION_PREFIX}"
     types = []
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
@@ -204,22 +202,22 @@ def make_routes(path):
         for cls in t.classes:
             cls_name = cls["id"]
             api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
+                f"{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
                 f"{t.name}_{cls_name}_id_geojson",
                 t.one(cls_name, extension="geojson"),
             )
             api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}/<cls_id>",
+                f"{prefix}/{t.name}/{cls_name}/<cls_id>",
                 f"{t.name}_{cls_name}_id",
                 t.one(cls_name),
             )
             api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}.geojson",
+                f"{prefix}/{t.name}/{cls_name}.geojson",
                 f"{t.name}_{cls_name}_geojson",
                 t.all(cls_name, extension="geojson"),
             )
             api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}",
+                f"{prefix}/{t.name}/{cls_name}",
                 f"{t.name}_{cls_name}",
                 t.all(cls_name),
             )
@@ -231,7 +229,8 @@ make_routes(routes_root_dir)
 
 @api.route("/")
 def index():
-    return render_template("index.html")
+    openapi_spec_path = f"{uri_path}spec"
+    return render_template("index.html", openapi_spec_path=openapi_spec_path)
 
 
 if __name__ == "__main__":
