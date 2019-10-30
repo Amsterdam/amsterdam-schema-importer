@@ -1,0 +1,59 @@
+body {
+  margin: 0 auto;
+  width: 900px;
+  max-width: 100%;
+  background: white;
+  color: black;
+  font-family: Avenir;
+  line-height: 1.8;
+  font-size: 17px;
+  margin-bottom: 2em;
+}
+
+header h1, header a {
+  margin-top: -2px;
+  font-size: 16px;
+  display: inline-flex;
+  color: rgb(0, 0, 0);
+  margin: 0px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.amsterdam {
+  margin-right: 10px;
+  display: inline-block;
+  height: 30px;
+  width: 68px;
+  flex-shrink: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+  background-size: cover;
+  background-image: url(data:image/svg+xml;base64,PHN2ZyBpZD0ibG9nb18xIiB4bWxucz0iaHR0cDovL3d3dy53M…AxMDAgMjAwLjIgODAgMjIwLjIgNTAgMTkwLjIgMjAgMjIwLjIgMCAyMDAuMiIvPjwvc3ZnPg==);
+}
+
+pre {
+  overflow-x: scroll;
+}
+
+button {
+  display: block;
+  margin: 0 auto;
+  font-size: 17px;
+  background-color: #ec0000;
+  background-repeat: no-repeat;
+  height: 2.75em;
+  padding: 0 0.9375em;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  margin-bottom: 1em;
+}
+
+button:hover {
+  background-color: #b50009;
+}

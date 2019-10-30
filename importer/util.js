@@ -29,7 +29,6 @@ const importData = async (datasetName, compiledSchema, objectStream, db) => {
   const objects = H(objectStream)
     .split()
     .compact()
-    .tap(console.log)
     .map(JSON.parse)
     .batch(100)
 
