@@ -45,7 +45,7 @@ class Type(aschema.Dataset):
         tail = "" if id_ is None else f"/{id_}"
         prefix = f"{uri_path}{URI_VERSION_PREFIX}"
 
-        return {"href": f"{request.host_url[:-1]}{prefix}/{type_name}/{cls_name}{tail}"}
+        return {"href": f"{prefix}/{type_name}/{cls_name}{tail}"}
 
     def all(self, cls_name, extension="json"):
         def fetch_clause_and_args():
@@ -83,7 +83,7 @@ class Type(aschema.Dataset):
                         **dict(row),
                         "_links": {
                             "self": self._links(
-                                self.name, cls_name, row[self.primary_names[cls_name]]
+                                self.name, cls_name, row[self.primary_names[cls_name].lower()]
                             )
                         },
                         "geometry": json.loads(row["geometry"]),
@@ -193,7 +193,7 @@ def make_spec(types):
 
 def make_routes(path):
     p = Path(path)
-    prefix = f"{uri_path}{URI_VERSION_PREFIX}"
+    prefix = f"/{URI_VERSION_PREFIX}"
     types = []
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
