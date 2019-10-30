@@ -68,8 +68,10 @@ class Type(aschema.Dataset):
 
             where_clause = f"""
                 WHERE ST_DWithin(geometry, ST_Transform(ST_GeomFromText('POINT(%s %s)', %s), %s), %s)
+                ORDER BY geometry <-> ST_Transform(ST_GeomFromText('POINT(%s %s)', %s), %s)
                 """
-            return where_clause, (near + [srid_near_coords, DB_SRID, distance])
+            args = near + [srid_near_coords, DB_SRID, distance]
+            return where_clause, args + args[:-1]
 
         def all_handler(where_clause, qargs):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
