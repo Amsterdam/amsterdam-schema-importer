@@ -20,6 +20,7 @@ def main(setup_func=setup):
         extras_require={
             'testing': test_requires,
         },
+        python_requires='>=3.6',
     )
 
 
