@@ -13,6 +13,7 @@ const util = require('./util')
 const db = require('./db')
 const validate = require('./validate')
 
+const mapfilePath = process.env.MAPFILE_DIRECTORY || path.join(__dirname, '..', 'mapserver')
 const dataPath = process.env.DATA_DIRECTORY || path.join(__dirname, '..', 'data')
 const port = process.env.PORT || 8080
 const workerUrl = process.env.WORKER_URL || 'http://localhost:8766/mapfiles'
@@ -44,12 +45,20 @@ app.post('/import/:datasetId', async (req, res) => {
     const validator = await validate.createValidatorAsync(amsSchema)
 
     console.log('Validating:', compiledSchema)
-    const result = validator(compiledSchema)
 
+    const result = validator(compiledSchema)
     console.log('Validation result:', result)
   } catch (err) {
     console.error('Sending internal server error 500:', err.message)
-    res.status(500).send(`Error compiling schema: ${err.message}`)
+    if (err.name === 'ValidationException') {
+      console.error(err.errors)
+    }
+
+    res.status(500).send({
+      message: `Error compiling schema: ${err.message}`,
+      errors: err.errors
+    })
+
     return
   }
 
@@ -60,19 +69,18 @@ app.post('/import/:datasetId', async (req, res) => {
       data: compiledSchema
     })
 
-    const mapfileDir = path.join(__dirname, 'mapserver')
-    const mapfileFilename = path.join(mapfileDir, `${datasetId}.map`)
+    const mapfileFilename = path.join(mapfilePath, `${datasetId}.map`)
     const mapfile = response.data
 
     fs.writeFileSync(mapfileFilename, mapfile, 'utf8')
   } catch (err) {
-    console.error(`Error sending dadddta to worker: ${err.message}`)
-    // res.status(500).send(err.message)
-    // return
+    console.error(`Error sending data to worker: ${err.message}`)
+    res.status(500).send(err.message)
+    return
   }
 
   try {
-    console.error('Starting improt')
+    console.error('Starting import')
     await util.importData(datasetId, compiledSchema, objectStream, db)
     res.send('Done')
   } catch (err) {

@@ -41,10 +41,12 @@ services:
       - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
       - WORKER_URL=http://worker/mapfiles
       - DATA_DIRECTORY=/data
+      - MAPFILE_DIRECTORY=/mapfiles
     command:
       node server.js
     volumes:
       - ./data:/data
+      - ./mapserver:/mapfiles
 
   worker:
     build: ./worker

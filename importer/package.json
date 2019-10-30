@@ -1,7 +1,7 @@
 {
   "name": "amsterdam-schema-importer",
   "version": "1.0.0",
-  "description": "",
+  "description": "Amsterdam Schema Importer",
   "main": "index.js",
   "dependencies": {
     "ajv": "^6.10.2",
