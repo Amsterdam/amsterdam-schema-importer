@@ -37,7 +37,7 @@ class Type(aschema.Dataset):
 
     def primary_name(self, cls):
         id_fields = [
-            k.lower()
+            k
             for k, v in cls["schema"]["properties"].items()
             if "$ref" in v and v["$ref"] == ID_REF
         ]
@@ -126,7 +126,10 @@ class Type(aschema.Dataset):
         def handler(cls_id):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
             primary_name = self.primary_names[cls_name]
-            sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name} WHERE {primary_name} = %s"
+            sql = f"""
+                SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name}
+                    WHERE {primary_name} = %s
+            """
             rows = [dict(row) for row in current_app.db.con.execute(sql, (cls_id,))]
             if not rows:
                 abort(404)
@@ -162,17 +165,30 @@ def make_spec(types):
     def spec():
         paths = {}
         prefix = URI_VERSION_PREFIX
+        info = {"title": "OpenAPI Amsterdam Schema", "version": "0.0.1"}
         for t in types:
             for cls in t.classes:
                 cls_name = cls["id"]
                 primary_name = t.primary_names[cls_name]
+                primary_name_description = cls["schema"]["properties"][primary_name][
+                    "description"
+                ]
                 paths[f"/{prefix}/{t.name}/{cls_name}/{{cls_id}}"] = {
-                    "get": {"parameters": [{"name": primary_name, "in": "path"}]}
+                    "get": {
+                        "parameters": [
+                            {
+                                "name": primary_name,
+                                "in": "path",
+                                "required": True,
+                                "description": primary_name_description,
+                            }
+                        ]
+                    }
                 }
                 paths[f"/{prefix}/{t.name}/{cls_name}"] = {
-                    "get": {"description": "Get all"}
+                    "get": {"description": t["title"]}
                 }
-        return jsonify({"openapi": "3.0.0", "paths": paths})
+        return jsonify({"openapi": "3.0.0", "paths": paths, "info": info})
 
     return spec
 
