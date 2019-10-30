@@ -16,8 +16,8 @@ from dataservices import amsterdam_schema as aschema
 
 # from .app import DynAPI
 
-LAT_LON_SRID = 4269
-RD_SRID = 28992
+LAT_LON_SRID = 4326
+DB_SRID = 28992
 
 
 # app = DynAPI(__name__)
@@ -69,10 +69,10 @@ class Type(aschema.Dataset):
             where_clause = f"""
                 WHERE ST_DWithin(geometry, ST_Transform(ST_GeomFromText('POINT(%s %s)', %s), %s), %s)
                 """
-            return where_clause, (near + [srid_near_coords, RD_SRID, distance])
+            return where_clause, (near + [srid_near_coords, DB_SRID, distance])
 
         def all_handler(where_clause, qargs):
-            output_srid = RD_SRID if extension == "json" else LAT_LON_SRID
+            output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
             sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name} {where_clause}"
             result = current_app.db.con.execute(sql, qargs)
 
@@ -81,16 +81,12 @@ class Type(aschema.Dataset):
                 rows = [
                     {
                         **dict(row),
-                        **{
-                            "_links": {
-                                "self": self._links(
-                                    self.name,
-                                    cls_name,
-                                    row[self.primary_names[cls_name]],
-                                )
-                            }
+                        "_links": {
+                            "self": self._links(
+                                self.name, cls_name, row[self.primary_names[cls_name]]
+                            )
                         },
-                        **{"geometry": json.loads(row["geometry"])},
+                        "geometry": json.loads(row["geometry"]),
                     }
                     for row in result
                 ]
@@ -109,7 +105,7 @@ class Type(aschema.Dataset):
                                 for k, v in dict(row).items()
                                 if k not in set(["geometry", "id"])
                             },
-                            **{"geometry": json.loads(row["geometry"])},
+                            "geometry": json.loads(row["geometry"]),
                         }
                         for row in result
                     ],
@@ -124,17 +120,38 @@ class Type(aschema.Dataset):
 
         return handler
 
-    def one(self, cls_name):
+    def one(self, cls_name, extension="json"):
         def handler(cls_id):
+            output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
             primary_name = self.primary_names[cls_name]
-            sql = f"SELECT * FROM {self.name}.{cls_name} WHERE {primary_name} = %s"
+            sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name} WHERE {primary_name} = %s"
             rows = [dict(row) for row in current_app.db.con.execute(sql, (cls_id,))]
             if not rows:
                 abort(404)
-            return {
-                **rows[0],
-                **{"_links": {"self": self._links(self.name, cls_name, cls_id)}},
-            }
+            row = rows[0]
+            if extension == "json":
+                return jsonify(
+                    {
+                        **row,
+                        "_links": {"self": self._links(self.name, cls_name, cls_id)},
+                        "geometry": json.loads(row["geometry"]),
+                    }
+                )
+            elif extension == "geojson":
+                return jsonify(
+                    {
+                        "type": "Feature",
+                        "id": row["id"],
+                        "properties": {
+                            k: v
+                            for k, v in dict(row).items()
+                            if k not in set(["geometry", "id"])
+                        },
+                        "geometry": json.loads(row["geometry"]),
+                    }
+                )
+            else:
+                abort(400)
 
         return handler
 
@@ -168,6 +185,11 @@ def make_routes(path):
         types.append(t)
         for cls in t.classes:
             cls_name = cls["id"]
+            api.add_url_rule(
+                f"/{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
+                f"{t.name}_{cls_name}_id_geojson",
+                t.one(cls_name, extension="geojson"),
+            )
             api.add_url_rule(
                 f"/{prefix}/{t.name}/{cls_name}/<cls_id>",
                 f"{t.name}_{cls_name}_id",
