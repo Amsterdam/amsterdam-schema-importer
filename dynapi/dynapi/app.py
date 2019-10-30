@@ -1,6 +1,5 @@
 from os import environ
 from flask import Flask
-from flask_api import FlaskAPI
 from flask_sacore import SACore
 
 dsn = environ["DATABASE_URL"]
