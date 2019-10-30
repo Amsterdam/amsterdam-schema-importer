@@ -59,7 +59,7 @@ services:
     volumes:
       - ./mapserver:/srv/mapserver
     ports:
-      - "8090:80"
+      - "80:80"
 
   dynapi:
     build: ./dynapi
@@ -70,7 +70,7 @@ services:
       - "6543:6543"
     command:
       # sleep infinity
-      gunicorn api:app -w 2 -b 0.0.0.0:6543
+      gunicorn dynapi.wsgi:app -w 2 -b 0.0.0.0:6543
     volumes:
     - ./dynapi:/dynapi
     - ./data:/data
