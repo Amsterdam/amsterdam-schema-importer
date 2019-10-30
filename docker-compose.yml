@@ -64,7 +64,7 @@ services:
       - ROUTES_ROOT_DIR=/data
     command:
       # sleep infinity
-      gunicorn dynapi.wsgi:app -w 2 -b 0.0.0.0:6543
+      gunicorn dynapi.wsgi:app -w 2 -b 0.0.0.0:80
     volumes:
     - ./dynapi:/dynapi
     - ./data:/data
