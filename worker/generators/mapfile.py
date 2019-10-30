@@ -2,30 +2,65 @@ from collections import ChainMap
 from dataclasses import dataclass
 import typing
 
-from ..interfaces.amsterdam_schema import AmsterdamSchema
+from dataservices import amsterdam_schema as schema
 from ..interfaces.mapfile import types, serializers
 
 
+MapfileStr = str
+
+@dataclass
+class MapserviceLayerContext:
+    """ Context for generating mapfile layers from a amsterdam dataclass
+        and its parent dataset. """
+    dataset: schema.Dataset
+    dataclass: schema.Dataclass
+
+    @property
+    def name(self):
+        return self.dataclass['id']
+
+    @property
+    def projections(self) -> typing.List[str]:
+        return [self.dataset.crs]
+    
+    @property
+    def srid(self) -> int:
+        return int(
+            self.dataset.crs.split(':')[-1]
+        )
+    
+    @property
+    def metadata(self) -> dict:
+        return {
+            "ows_enable_request": "*"
+        }
+
+
+class MapServiceContext:
+    """ Context for generating mapfiles from a amsterdam dataset """
+
+    def __init__(self, dataset: schema.Dataset):
+        self.dataset = dataset
+    
+    @property
+    def name(self):
+        return self.dataset['id']
+    
+    @property
+    def layers(self) -> typing.List[MapserviceLayerContext]:
+        return [
+            MapserviceLayerContext(self.dataset, dc)
+            for dc in self.dataset.classes
+        ]
+    
+
 @dataclass
 class Generator:
-    datasets: typing.List[object]
-    map_dir: str
-
-    def load_datasets(self):
-        raise NotImplementedError
-
     def serialize(self, dataset) -> str:
         raise NotImplementedError
 
-    def write(self, dataset, serialized):
-        fp = f"{self.map_dir}/{dataset.name}.map"
-        with open(fp, "w") as fh:
-            fh.write(serialized)
-
-    def __call__(self):
-        for dataset in self.datasets:
-            serialized = self.serialize(dataset)
-            self.write(dataset, serialized)
+    def __call__(self, dataset):
+        return self.serialize(dataset)
 
 
 @dataclass
@@ -52,55 +87,44 @@ class MapfileGenerator(Generator):
             )
         return feature_class
 
-    def generate_layer(self, dataset, name, layer_dict) -> types.Layer:
-        styles = layer_dict.get('base_styles', [])
-        features = layer_dict.get('features', [])
-        srid_str = dataset.get('crs', 'EPSG:28992')
-        srid = int(srid_str.split(':')[-1])
-
-        layer = types.Layer(
-            name=name,
+    def generate_layer(self, context: MapserviceLayerContext) -> types.Layer:
+        return types.Layer(
+            name=context.name,
             type=types.LayerType.polygon,
-            classes=[],
-            projection=layer_dict.get('projection', None),
-            include=["connection_various_small_datasets.inc"],
-            data=[types.Data.for_postgres(
-                layer_dict['field'], layer_dict['dataset_class'],
-                srid=srid, UNIQUE="id"
-            )],
-            metadata=types.Metadata(layer_dict.get('metadata', {}))
-        )
-        for feature_dict in features:
-            layer.classes.append(
-                self.generate_feature_class(
-                    feature_dict, styles
+            with_connection=types.Connection.for_postgres(
+                "postgres", "", "postgres", "postgres"
+            ),
+            data=[
+                types.Data.for_postgres(
+                    "geometry", f"{context.dataset.name}.{context.name}",
+                    srid=context.srid, UNIQUE="id"
                 )
-            )
-        return layer
+            ],
+            classes=[
+                types.FeatureClass(
+                    styles=[{
+                        '__type__': 'style',
+                        'color': [200,50,50],
+                        'antialias': True
+                    }]
+                )
+            ],
+            metadata=types.Metadata(context.metadata)
+        )
 
-    def serialize(self, dataset: AmsterdamSchema) -> str:
-        mapservice_data = dataset['services']['mapservice']
+    def serialize(self, dataset: schema.Dataset) -> MapfileStr:
+        context = MapServiceContext(dataset)
         mapfile = types.Mapfile(
-            name=dataset['id'],
+            name=context.name,
             layers=[],
             include=['header.inc'],
-            projection=mapservice_data.get('projection', None)
         )
-        try:
-            mapfile.web = types.Web(
-                types.Metadata(mapservice_data['web']['metadata'])
+        mapfile.layers.extend(
+            map(
+                self.generate_layer, context.layers
             )
-        except KeyError:
-            pass
-
-        for name, layer_dict in mapservice_data.get('layers', {}).items():
-            mapfile.layers.append(
-                self.generate_layer(
-                    dataset, name, layer_dict
-                )
-            )
-
-        return self.serializer(mapfile)
+        )
+        return MapfileStr(self.serializer(mapfile))
 
 
 @dataclass
