@@ -1,5 +1,6 @@
 Flask
 Flask-SACore
+Flask-Cors
 psycopg2
 SQLAlchemy
 gunicorn
