@@ -85,7 +85,9 @@ class Type(aschema.Dataset):
                         **dict(row),
                         "_links": {
                             "self": self._links(
-                                self.name, cls_name, row[self.primary_names[cls_name]]
+                                self.name,
+                                cls_name,
+                                row[self.primary_names[cls_name].lower()],
                             )
                         },
                         "geometry": json.loads(row["geometry"]),
@@ -166,8 +168,27 @@ def make_spec(types):
             for cls in t.classes:
                 cls_name = cls["id"]
                 primary_name = t.primary_names[cls_name]
-                paths[f"/{prefix}/{t.name}/{cls_name}/{{cls_id}}"] = {
-                    "get": {"parameters": [{"name": primary_name, "in": "path"}]}
+                primary_name_description = cls["schema"]["properties"][primary_name][
+                    "description"
+                ]
+                paths[f"{prefix}/{t.name}/{cls_name}/{{cls_id}}"] = {
+                    "get": {
+                        "parameters": [
+                            {
+                                "name": primary_name,
+                                "in": "path",
+                                "required": True,
+                                "description": primary_name_description,
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "successful operation",
+                                "content": {},
+                                "schema": {"$ref": "#/definitions/Pet"},
+                            }
+                        },
+                    }
                 }
                 paths[f"/{prefix}/{t.name}/{cls_name}"] = {
                     "get": {"description": "Get all"}

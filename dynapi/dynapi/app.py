@@ -22,8 +22,4 @@ def app_factory():
 
     app = DynAPI(__name__)
     app.register_blueprint(api)
-    app.config["DEFAULT_RENDERERS"] = [
-        "flask_api.renderers.JSONRenderer",
-        "flask_api.renderers.BrowsableAPIRenderer",
-    ]
     return app
