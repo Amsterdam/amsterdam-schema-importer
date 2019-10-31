@@ -48,6 +48,8 @@ app.post('/import/:datasetId', async (req, res) => {
 
     const result = validator(compiledSchema)
     console.log('Validation result:', result)
+
+    // TODO: also validate data!
   } catch (err) {
     console.error('Sending internal server error 500:', err.message)
     if (err.name === 'ValidationException') {
@@ -80,8 +82,9 @@ app.post('/import/:datasetId', async (req, res) => {
   }
 
   try {
-    console.error('Starting import')
+    console.log('Starting import')
     await util.importData(datasetId, compiledSchema, objectStream, db)
+    console.log('Importing successful!')
     res.send('Done')
   } catch (err) {
     console.error(err.message)
