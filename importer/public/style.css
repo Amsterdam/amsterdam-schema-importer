@@ -10,8 +10,11 @@ body {
   margin-bottom: 2em;
 }
 
+header {
+  margin-top: 1em;
+}
+
 header, header a {
-  margin-top: -2px;
   font-size: 16px;
   display: inline-flex;
   color: rgb(0, 0, 0);
@@ -22,6 +25,7 @@ header, header a {
 
 .amsterdam {
   margin-right: 10px;
+  margin-top: 6px;
   display: inline-block;
   height: 60px;
   width: 90px;
