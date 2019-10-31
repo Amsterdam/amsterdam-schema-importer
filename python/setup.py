@@ -12,7 +12,7 @@ def main(setup_func=setup):
 
 
     setup_func(
-        version="0.0.2",
+        version="0.0.3",
         name='dataservices',
         packages=find_packages(),
         install_requires=install_requires,
