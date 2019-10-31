@@ -101,7 +101,9 @@ class Type(aschema.Dataset):
                         **dict(row),
                         "_links": {
                             "self": self._links(
-                                self.name, cls_name, row[self.primary_names[cls_name].lower()]
+                                self.name,
+                                cls_name,
+                                row[self.primary_names[cls_name].lower()],
                             )
                         },
                         "geometry": json.loads(row["geometry"]),
@@ -225,7 +227,7 @@ def make_spec(types):
     return spec
 
 
-def make_routes(path):
+def make_routes(app, path):
     p = Path(path)
     prefix = f"/{URI_VERSION_PREFIX}"
     types = []
@@ -235,17 +237,17 @@ def make_routes(path):
         types.append(t)
         for cls in t.classes:
             cls_name = cls["id"]
-            api.add_url_rule(
+            app.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
                 f"{t.name}_{cls_name}_id_geojson",
                 t.one(cls_name, extension="geojson"),
             )
-            api.add_url_rule(
+            app.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}/<cls_id>",
                 f"{t.name}_{cls_name}_id",
                 t.one(cls_name),
             )
-            api.add_url_rule(
+            app.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}.geojson",
                 f"{t.name}_{cls_name}_geojson",
                 t.all(cls_name, extension="geojson"),
@@ -265,16 +267,22 @@ def make_routes(path):
                 f"{t.name}_{cls_name}",
                 t.all(cls_name),
             )
-    api.add_url_rule("/spec", "openapi-spec", make_spec(types))
-
-
-make_routes(routes_root_dir)
+    app.add_url_rule("/spec", "openapi-spec", make_spec(types))
 
 
 @api.route("/")
 def index():
     openapi_spec_path = f"{uri_path}spec"
     return render_template("index.html", openapi_spec_path=openapi_spec_path)
+
+
+@api.route("/recreate-routes")
+def recreate_routes():
+    from .app import AppReloader
+
+    AppReloader.reload()
+
+    return jsonify({"result": "ok"})
 
 
 if __name__ == "__main__":
