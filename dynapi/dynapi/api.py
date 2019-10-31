@@ -83,7 +83,9 @@ class Type(aschema.Dataset):
                         **dict(row),
                         "_links": {
                             "self": self._links(
-                                self.name, cls_name, row[self.primary_names[cls_name].lower()]
+                                self.name,
+                                cls_name,
+                                row[self.primary_names[cls_name].lower()],
                             )
                         },
                         "geometry": json.loads(row["geometry"]),
@@ -217,14 +219,9 @@ def make_routes(app, path):
                 t.all(cls_name, extension="geojson"),
             )
             app.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}",
-                f"{t.name}_{cls_name}",
-                t.all(cls_name),
+                f"{prefix}/{t.name}/{cls_name}", f"{t.name}_{cls_name}", t.all(cls_name)
             )
     app.add_url_rule("/spec", "openapi-spec", make_spec(types))
-
-
-# make_routes(routes_root_dir)
 
 
 @api.route("/")
@@ -232,14 +229,14 @@ def index():
     openapi_spec_path = f"{uri_path}spec"
     return render_template("index.html", openapi_spec_path=openapi_spec_path)
 
+
 @api.route("/recreate-routes")
 def recreate_routes():
     from .app import AppReloader
-    # make_routes(routes_root_dir)
+
     AppReloader.reload()
 
     return jsonify({"result": "ok"})
-
 
 
 if __name__ == "__main__":

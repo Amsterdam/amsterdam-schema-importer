@@ -37,13 +37,10 @@ class AppReloader(object):
 
     @classmethod
     def reload(cls):
-        print('reloading ..')
         cls._needs_reload = True
 
     def get_application(self):
-        print('getting application ..')
         if self._needs_reload:
-            print('recreating ..')
             self.app = app_factory()
             self.__class__._needs_reload = False
 
@@ -51,5 +48,4 @@ class AppReloader(object):
 
     def __call__(self, environ, start_response):
         app = self.get_application()
-        print('__call__', app)
         return app(environ, start_response)
