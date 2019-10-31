@@ -7,7 +7,7 @@ COPY ./requirements.txt /app
 WORKDIR /app
 
 RUN pip install -r requirements.txt
-RUN pip install dataservices
+RUN pip install dataservices==0.0.3
 
 WORKDIR /dynapi
 

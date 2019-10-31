@@ -1,4 +1,5 @@
 flask
 jsonref==0.2
 mappyfile
-dataservices
+dataservices>=0.0.3
+
