@@ -1,5 +1,7 @@
 from os import environ
 import json
+import csv
+import io
 from pathlib import Path
 
 from pint import UnitRegistry
@@ -73,8 +75,25 @@ class Type(aschema.Dataset):
 
         def all_handler(where_clause, qargs):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
-            sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name} {where_clause}"
+
+            sql = ""
+            if extension == "csv":
+                sql = f"SELECT *, ST_AsText(ST_Transform(geometry, {output_srid})) AS _geometry FROM {self.name}.{cls_name} {where_clause}"
+            else:
+                sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS _geometry FROM {self.name}.{cls_name} {where_clause}"
+
             result = current_app.db.con.execute(sql, qargs)
+
+            result_rows = []
+            for row in result:
+                result_row = {}
+                for k,v in dict(row).items():
+                    if k == "geometry":
+                        v = row["_geometry"]
+                    elif k == "_geometry":
+                        continue
+                    result_row[k] = v
+                result_rows.append(result_row)
 
             if extension == "json":
                 rows = [
@@ -87,7 +106,7 @@ class Type(aschema.Dataset):
                         },
                         "geometry": json.loads(row["geometry"]),
                     }
-                    for row in result
+                    for row in result_rows
                 ]
                 return jsonify(rows)
             elif extension == "ndjson":
@@ -96,9 +115,17 @@ class Type(aschema.Dataset):
                         **dict(row),
                         "geometry": json.loads(row["geometry"])
                     }
-                    for row in result
+                    for row in result_rows
                 ]
                 return ("\n").join(json.dumps(row, separators=(",", ":")) for row in rows)
+
+            elif extension == "csv":
+                rows = result_rows
+                mem_file = io.StringIO()
+                writer = csv.writer(mem_file)
+                writer.writerow(rows[0].keys())
+                writer.writerows([row.values() for row in rows])
+                return mem_file.getvalue()
 
             elif extension == "geojson":
                 geojson = {
@@ -114,7 +141,7 @@ class Type(aschema.Dataset):
                             },
                             "geometry": json.loads(row["geometry"]),
                         }
-                        for row in result
+                        for row in result_rows
                     ],
                 }
                 return jsonify(geojson)
@@ -227,6 +254,11 @@ def make_routes(path):
                 f"{prefix}/{t.name}/{cls_name}.ndjson",
                 f"{t.name}_{cls_name}_ndjson",
                 t.all(cls_name, extension="ndjson"),
+            )
+            api.add_url_rule(
+                f"{prefix}/{t.name}/{cls_name}.csv",
+                f"{t.name}_{cls_name}_csv",
+                t.all(cls_name, extension="csv"),
             )
             api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}",
