@@ -77,7 +77,6 @@ class Type(aschema.Dataset):
             result = current_app.db.con.execute(sql, qargs)
 
             if extension == "json":
-
                 rows = [
                     {
                         **dict(row),
@@ -93,9 +92,17 @@ class Type(aschema.Dataset):
                     for row in result
                 ]
                 return jsonify(rows)
+            elif extension == "ndjson":
+                rows = [
+                    {
+                        **dict(row),
+                        "geometry": json.loads(row["geometry"])
+                    }
+                    for row in result
+                ]
+                return ("\n").join(json.dumps(row, separators=(",", ":")) for row in rows)
 
             elif extension == "geojson":
-
                 geojson = {
                     "type": "FeatureCollection",
                     "features": [
@@ -218,8 +225,15 @@ def make_routes(app, path):
                 f"{t.name}_{cls_name}_geojson",
                 t.all(cls_name, extension="geojson"),
             )
-            app.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}", f"{t.name}_{cls_name}", t.all(cls_name)
+            api.add_url_rule(
+                f"{prefix}/{t.name}/{cls_name}.ndjson",
+                f"{t.name}_{cls_name}_ndjson",
+                t.all(cls_name, extension="ndjson"),
+            )
+            api.add_url_rule(
+                f"{prefix}/{t.name}/{cls_name}",
+                f"{t.name}_{cls_name}",
+                t.all(cls_name),
             )
     app.add_url_rule("/spec", "openapi-spec", make_spec(types))
 
