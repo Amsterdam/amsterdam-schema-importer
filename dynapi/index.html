@@ -14,11 +14,10 @@
         <div id="swagger-ui"></div>
     </body>
 
-<<<<<<< Updated upstream
     <script src="//unpkg.com/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
         <script language="javascript">
             const ui = SwaggerUIBundle({
-              url: '{{ openapi_spec_path }}',
+                url: '/spec',
                 dom_id: '#swagger-ui',
                 presets: [
                     SwaggerUIBundle.presets.apis,
@@ -26,29 +25,5 @@
                 ],
             });
         </script>
-=======
-    <script src="https://unpkg.com/swagger-ui-dist@3.12.1/swagger-ui-standalone-preset.js"></script>
-    <script src="https://unpkg.com/swagger-ui-dist@3.12.1/swagger-ui-bundle.js"></script>
-    <script language="javascript">
-      window.onload = function() {
-        const ui = SwaggerUIBundle({
-          url: '{{ openapi_spec_path }}',
-          dom_id: '#swagger-ui',
-          deepLinking: true,
-          presets: [
-                SwaggerUIBundle.presets.apis,
-                SwaggerUIStandalonePreset,
-          ],
-          plugins: [
-              SwaggerUIBundle.plugins.DownloadUrl
-          ],
-          layout: "StandaloneLayout"
-        });
-
-      window.ui = ui
-    }
-
-    </script>
->>>>>>> Stashed changes
 
 </html>

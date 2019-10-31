@@ -1,6 +1,8 @@
-node_modules
+importer/node_modules
 data/*
 !data/README.md
 
 *-workspace
 mapserver/*.map
+
+node_modules

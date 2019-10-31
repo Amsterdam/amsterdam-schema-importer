@@ -21,7 +21,9 @@ const axios = require('axios')
 // const Validate = require('./lib/validate')
 
 function loadSchema (uri) {
+  console.log('Loading schema from URI:', uri)
   return axios.get(uri)
+    .then((response) => response.data)
 }
 
 function ValidationException (data, errors) {
@@ -37,15 +39,19 @@ async function createValidatorAsync (schema) {
     loadSchema
   })
 
-  const validate = await ajv.compileAsync(schema)
+  try {
+    const validate = await ajv.compileAsync(schema)
 
-  return function (data) {
-    const valid = validate(data)
-    if (!valid) {
-      throw new ValidationException(data, validate.errors)
+    return function (data) {
+      const valid = validate(data)
+      if (!valid) {
+        throw new ValidationException(data, validate.errors)
+      }
+
+      return true
     }
-
-    return true
+  } catch (err) {
+    throw err
   }
 }
 

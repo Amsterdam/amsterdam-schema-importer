@@ -11,18 +11,18 @@ const app = express()
 
 const util = require('./util')
 const db = require('./db')
+const validate = require('./validate')
 
-const dataPath = path.join(__dirname, 'data')
-
-const port = process.env.PORT || 8765
+const mapfilePath = process.env.MAPFILE_DIRECTORY || path.join(__dirname, '..', 'mapserver')
+const dataPath = process.env.DATA_DIRECTORY || path.join(__dirname, '..', 'data')
+const port = process.env.PORT || 8080
 const workerUrl = process.env.WORKER_URL || 'http://localhost:8766/mapfiles'
+const SCHEMA_BASE_URL = 'https://ams-schema.glitch.me/'
 
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(fileUpload())
 app.use(cors())
 app.set('json spaces', 2)
-
-const schemasBaseUrl = 'https://ams-schema.glitch.me/dataset/'
 
 app.post('/import/:datasetId', async (req, res) => {
   const datasetId = req.params.datasetId
@@ -36,8 +36,31 @@ app.post('/import/:datasetId', async (req, res) => {
   try {
     const datasetSchema = JSON.parse(fs.readFileSync(path.join(datasetPath, `${datasetId}.dataset.schema.json`), 'utf8'))
     compiledSchema = await util.compileSchema(datasetSchema, datasetPath)
+
+    const amsSchemaUrl = `${SCHEMA_BASE_URL}schema`
+    const response = await axios.get(amsSchemaUrl)
+    const amsSchema = response.data
+
+    console.log('Creating validator:', amsSchema)
+    const validator = await validate.createValidatorAsync(amsSchema)
+
+    console.log('Validating:', compiledSchema)
+
+    const result = validator(compiledSchema)
+    console.log('Validation result:', result)
+
+    // TODO: also validate data!
   } catch (err) {
-    res.status(500).send(`Error compiling schema: ${err.message}`)
+    console.error('Sending internal server error 500:', err.message)
+    if (err.name === 'ValidationException') {
+      console.error(err.errors)
+    }
+
+    res.status(500).send({
+      message: `Error compiling schema: ${err.message}`,
+      errors: err.errors
+    })
+
     return
   }
 
@@ -48,19 +71,20 @@ app.post('/import/:datasetId', async (req, res) => {
       data: compiledSchema
     })
 
-    const mapfileDir = path.join(__dirname, 'mapserver')
-    const mapfileFilename = path.join(mapfileDir, `asbestdaken.daken.map`)
+    const mapfileFilename = path.join(mapfilePath, `${datasetId}.map`)
     const mapfile = response.data
+
     fs.writeFileSync(mapfileFilename, mapfile, 'utf8')
   } catch (err) {
-    console.error(`Error sending dadddta to worker: ${err.message}`)
-    // res.status(500).send(err.message)
-    // return
+    console.error(`Error sending data to worker: ${err.message}`)
+    res.status(500).send(err.message)
+    return
   }
 
   try {
-    console.error('Starting improt')
+    console.log('Starting import')
     await util.importData(datasetId, compiledSchema, objectStream, db)
+    console.log('Importing successful!')
     res.send('Done')
   } catch (err) {
     console.error(err.message)
@@ -92,57 +116,6 @@ app.post('/upload/:datasetId', async (req, res, next) => {
   }
 
   res.send('Done')
-})
-
-app.get('/check-schema/:datasetId', async (req, res) => {
-  const datasetId = req.params.datasetId
-
-  // URL of dataset JSON metadata file
-  const datasetBaseUrl = schemasBaseUrl + datasetId + '/'
-  const datasetUrl = datasetBaseUrl + datasetId
-
-  let schema
-  try {
-    const response = await axios.get(datasetUrl)
-    schema = response.data
-  } catch (err) {
-    res.status(err.response.status).send(err.response.statusMessage)
-  }
-
-  try {
-    const compiledSchema = await util.compileSchema(schema, datasetBaseUrl)
-    // util.validate
-
-    res.send(compiledSchema)
-  } catch (err) {
-    res.status(500).send(err.message)
-  }
-})
-
-app.get('/:datasetId/:classId', async (req, res) => {
-  const datasetId = req.params.datasetId
-  const classId = req.params.classId
-
-  const query = `
-  SELECT *, ST_AsGeoJSON(ST_Transform(geometry, 4326)) AS geometry
-  FROM $1~.$2~`
-
-  try {
-    const rows = await db.db.any(query, [datasetId, classId])
-    res.send({
-      type: 'FeatureCollection',
-      features: rows.map((row) => ({
-        type: 'Feature',
-        properties: {
-          ...row,
-          geometry: undefined
-        },
-        geometry: JSON.parse(row.geometry)
-      }))
-    })
-  } catch (err) {
-    res.status(500).send(err.message)
-  }
 })
 
 app.listen(port, () => console.log(`Amsterdam Schema Importer listening on port ${port}!`))

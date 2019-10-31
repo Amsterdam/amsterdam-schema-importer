@@ -1,6 +1,12 @@
-# NDJSON + Amsterdam Schema ⟶ PostgreSQL tables + data
+# NDJSON + Amsterdam Schema ⟶ PostgreSQL tables + Data Services
 
-A small prototype tool that reads Amsterdam Schema + NDJSON data, creates PostgeSQL tables, and allows access using Hasura.
+A small prototype tool that reads Amsterdam Schema + NDJSON data, and creates the following services:
+
+- GraphQL, using Hasura or Postgraphile,
+- MapServer,
+- A Node.js data upload and validation tool,
+- A Mapfile generator,
+- A REST API, using Flask.
 
 ## Usage
 
@@ -8,9 +14,7 @@ Run Hasura using Docker:
 
     docker-compose up
 
-Then, install Node.js dependencies:
-
-    npm install
+## Using the command line validator:
 
 Finally, run the script with the example data & schema:
 

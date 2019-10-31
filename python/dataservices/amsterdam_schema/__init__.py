@@ -15,7 +15,7 @@ class Dataset(UserDict):
     @property
     def classes(self):
         return [
-            Dataclass(i) for i in self['items']
+            Dataclass(i) for i in self['classes']
         ]
 
 

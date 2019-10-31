@@ -1,5 +1,7 @@
 from os import environ
 import json
+import csv
+import io
 from pathlib import Path
 
 from pint import UnitRegistry
@@ -14,18 +16,16 @@ from flask import render_template
 
 from dataservices import amsterdam_schema as aschema
 
-# from .app import DynAPI
-
 LAT_LON_SRID = 4326
 DB_SRID = 28992
 
 
-# app = DynAPI(__name__)
 api = Blueprint("v1", __name__)
 
 routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
 ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
+uri_path = environ["URI_PATH"]
 URI_VERSION_PREFIX = "latest"
 ureg = UnitRegistry()
 
@@ -37,7 +37,7 @@ class Type(aschema.Dataset):
 
     def primary_name(self, cls):
         id_fields = [
-            k.lower()
+            k
             for k, v in cls["schema"]["properties"].items()
             if "$ref" in v and v["$ref"] == ID_REF
         ]
@@ -45,9 +45,9 @@ class Type(aschema.Dataset):
 
     def _links(self, type_name, cls_name, id_=None):
         tail = "" if id_ is None else f"/{id_}"
-        prefix = URI_VERSION_PREFIX
+        prefix = f"{uri_path}{URI_VERSION_PREFIX}"
 
-        return {"href": f"{request.host_url}{prefix}/{type_name}/{cls_name}{tail}"}
+        return {"href": f"{prefix}/{type_name}/{cls_name}{tail}"}
 
     def all(self, cls_name, extension="json"):
         def fetch_clause_and_args():
@@ -75,11 +75,27 @@ class Type(aschema.Dataset):
 
         def all_handler(where_clause, qargs):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
-            sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name} {where_clause}"
+
+            sql = ""
+            if extension == "csv":
+                sql = f"SELECT *, ST_AsText(ST_Transform(geometry, {output_srid})) AS _geometry FROM {self.name}.{cls_name} {where_clause}"
+            else:
+                sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS _geometry FROM {self.name}.{cls_name} {where_clause}"
+
             result = current_app.db.con.execute(sql, qargs)
 
-            if extension == "json":
+            result_rows = []
+            for row in result:
+                result_row = {}
+                for k, v in dict(row).items():
+                    if k == "geometry":
+                        v = row["_geometry"]
+                    elif k == "_geometry":
+                        continue
+                    result_row[k] = v
+                result_rows.append(result_row)
 
+            if extension == "json":
                 rows = [
                     {
                         **dict(row),
@@ -92,12 +108,27 @@ class Type(aschema.Dataset):
                         },
                         "geometry": json.loads(row["geometry"]),
                     }
-                    for row in result
+                    for row in result_rows
                 ]
                 return jsonify(rows)
+            elif extension == "ndjson":
+                rows = [
+                    {**dict(row), "geometry": json.loads(row["geometry"])}
+                    for row in result_rows
+                ]
+                return ("\n").join(
+                    json.dumps(row, separators=(",", ":")) for row in rows
+                )
+
+            elif extension == "csv":
+                rows = result_rows
+                mem_file = io.StringIO()
+                writer = csv.writer(mem_file)
+                writer.writerow(rows[0].keys())
+                writer.writerows([row.values() for row in rows])
+                return mem_file.getvalue()
 
             elif extension == "geojson":
-
                 geojson = {
                     "type": "FeatureCollection",
                     "features": [
@@ -111,7 +142,7 @@ class Type(aschema.Dataset):
                             },
                             "geometry": json.loads(row["geometry"]),
                         }
-                        for row in result
+                        for row in result_rows
                     ],
                 }
                 return jsonify(geojson)
@@ -128,7 +159,10 @@ class Type(aschema.Dataset):
         def handler(cls_id):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
             primary_name = self.primary_names[cls_name]
-            sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name} WHERE {primary_name} = %s"
+            sql = f"""
+                SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name}
+                    WHERE {primary_name} = %s
+            """
             rows = [dict(row) for row in current_app.db.con.execute(sql, (cls_id,))]
             if not rows:
                 abort(404)
@@ -163,7 +197,8 @@ class Type(aschema.Dataset):
 def make_spec(types):
     def spec():
         paths = {}
-        prefix = URI_VERSION_PREFIX
+        prefix = f"{uri_path}{URI_VERSION_PREFIX}"
+        info = {"title": "OpenAPI Amsterdam Schema", "version": "0.0.1"}
         for t in types:
             for cls in t.classes:
                 cls_name = cls["id"]
@@ -190,17 +225,24 @@ def make_spec(types):
                         },
                     }
                 }
-                paths[f"/{prefix}/{t.name}/{cls_name}"] = {
-                    "get": {"description": "Get all"}
+                paths[f"{prefix}/{t.name}/{cls_name}"] = {
+                    "get": {"description": t["title"]}
                 }
-        return jsonify({"openapi": "3.0.0", "paths": paths})
+        return jsonify({"openapi": "3.0.0", "paths": paths, "info": info})
 
     return spec
 
 
-def make_routes(path):
+def add_url_rule(app, url, name, func):
+    try:
+        app.add_url_rule(url, name, func)
+    except AssertionError:
+        pass
+
+
+def make_routes(app, path):
     p = Path(path)
-    prefix = URI_VERSION_PREFIX
+    prefix = f"/{URI_VERSION_PREFIX}"
     types = []
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
@@ -208,35 +250,58 @@ def make_routes(path):
         types.append(t)
         for cls in t.classes:
             cls_name = cls["id"]
-            api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
+            add_url_rule(
+                app,
+                f"{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
                 f"{t.name}_{cls_name}_id_geojson",
                 t.one(cls_name, extension="geojson"),
             )
-            api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}/<cls_id>",
+            add_url_rule(
+                app,
+                f"{prefix}/{t.name}/{cls_name}/<cls_id>",
                 f"{t.name}_{cls_name}_id",
                 t.one(cls_name),
             )
-            api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}.geojson",
+            add_url_rule(
+                app,
+                f"{prefix}/{t.name}/{cls_name}.geojson",
                 f"{t.name}_{cls_name}_geojson",
                 t.all(cls_name, extension="geojson"),
             )
-            api.add_url_rule(
-                f"/{prefix}/{t.name}/{cls_name}",
+            add_url_rule(
+                app,
+                f"{prefix}/{t.name}/{cls_name}.ndjson",
+                f"{t.name}_{cls_name}_ndjson",
+                t.all(cls_name, extension="ndjson"),
+            )
+            add_url_rule(
+                app,
+                f"{prefix}/{t.name}/{cls_name}.csv",
+                f"{t.name}_{cls_name}_csv",
+                t.all(cls_name, extension="csv"),
+            )
+            add_url_rule(
+                app,
+                f"{prefix}/{t.name}/{cls_name}",
                 f"{t.name}_{cls_name}",
                 t.all(cls_name),
             )
-    api.add_url_rule("/spec", "openapi-spec", make_spec(types))
-
-
-make_routes(routes_root_dir)
+    add_url_rule(app, "/spec", "openapi-spec", make_spec(types))
 
 
 @api.route("/")
 def index():
-    return render_template("index.html")
+    openapi_spec_path = f"{uri_path}spec"
+    return render_template("index.html", openapi_spec_path=openapi_spec_path)
+
+
+@api.route("/recreate-routes")
+def recreate_routes():
+    from .app import AppReloader
+
+    AppReloader.reload()
+
+    return jsonify({"result": "ok"})
 
 
 if __name__ == "__main__":
