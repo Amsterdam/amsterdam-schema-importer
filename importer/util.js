@@ -6,7 +6,7 @@ const axios = require('axios')
 const toSnakeCase = (property) => property.replace(/\.?([A-Z]+)/g, '_$1').toLowerCase().replace(/^_/, '')
 
 const importData = async (datasetName, compiledSchema, objectStream, db) => {
-  const classes = compiledSchema.items
+  const classes = compiledSchema.classes
 
   const queries = classes.map((cls) => createTable(datasetName, cls))
   const grants = grantStatements(compiledSchema)
@@ -100,14 +100,14 @@ const compileSchema = async (schema, basePath) => {
 
   async function compile (s) {
     const schema = s.schema && await objOrRef(s.schema, basePath, isUrl)
-    let items
+    let classes
     try {
-      if (s.items) {
-        items = []
-        for (const itemOrRef of s.items) {
+      if (s.classes) {
+        classes = []
+        for (const itemOrRef of s.classes) {
           const item = await objOrRef(itemOrRef, basePath, isUrl)
           const compiledItem = await compile(item)
-          items.push(compiledItem)
+          classes.push(compiledItem)
         }
       }
     } catch (err) {
@@ -117,7 +117,7 @@ const compileSchema = async (schema, basePath) => {
     return {
       ...s,
       schema,
-      items
+      classes
     }
   }
 
@@ -139,7 +139,7 @@ ${columns.map((line) => `  ${line}`).join(',\n')}
 }
 
 const grantStatements = (completeSchema) => {
-  return completeSchema.items
+  return completeSchema.classes
     .map((cls) => {
       return Object.entries(cls.schema.properties)
         .map(([property, value]) => {
