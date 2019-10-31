@@ -226,6 +226,11 @@ def make_spec(types):
 
     return spec
 
+def add_url_rule(app, url, name, func):
+    try:
+        app.add_url_rule(url, name, func)
+    except AssertionError:
+        pass
 
 def make_routes(app, path):
     p = Path(path)
@@ -237,37 +242,43 @@ def make_routes(app, path):
         types.append(t)
         for cls in t.classes:
             cls_name = cls["id"]
-            app.add_url_rule(
+            add_url_rule(
+                app,
                 f"{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
                 f"{t.name}_{cls_name}_id_geojson",
                 t.one(cls_name, extension="geojson"),
             )
-            app.add_url_rule(
+            add_url_rule(
+                app,
                 f"{prefix}/{t.name}/{cls_name}/<cls_id>",
                 f"{t.name}_{cls_name}_id",
                 t.one(cls_name),
             )
-            app.add_url_rule(
+            add_url_rule(
+                app,
                 f"{prefix}/{t.name}/{cls_name}.geojson",
                 f"{t.name}_{cls_name}_geojson",
                 t.all(cls_name, extension="geojson"),
             )
-            api.add_url_rule(
+            add_url_rule(
+                app,
                 f"{prefix}/{t.name}/{cls_name}.ndjson",
                 f"{t.name}_{cls_name}_ndjson",
                 t.all(cls_name, extension="ndjson"),
             )
-            api.add_url_rule(
+            add_url_rule(
+                app,
                 f"{prefix}/{t.name}/{cls_name}.csv",
                 f"{t.name}_{cls_name}_csv",
                 t.all(cls_name, extension="csv"),
             )
-            api.add_url_rule(
+            add_url_rule(
+                app,
                 f"{prefix}/{t.name}/{cls_name}",
                 f"{t.name}_{cls_name}",
                 t.all(cls_name),
             )
-    app.add_url_rule("/spec", "openapi-spec", make_spec(types))
+    add_url_rule(app, "/spec", "openapi-spec", make_spec(types))
 
 
 @api.route("/")
