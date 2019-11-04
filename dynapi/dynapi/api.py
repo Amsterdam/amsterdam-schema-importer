@@ -232,7 +232,7 @@ def add_url_rule(app, url, name, func):
     except AssertionError:
         pass
 
-def make_routes(app, path):
+def make_routes(path):
     p = Path(path)
     prefix = f"/{URI_VERSION_PREFIX}"
     types = []
@@ -242,43 +242,40 @@ def make_routes(app, path):
         types.append(t)
         for cls in t.classes:
             cls_name = cls["id"]
-            add_url_rule(
-                app,
+            api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
                 f"{t.name}_{cls_name}_id_geojson",
                 t.one(cls_name, extension="geojson"),
             )
-            add_url_rule(
-                app,
+            api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}/<cls_id>",
                 f"{t.name}_{cls_name}_id",
                 t.one(cls_name),
             )
-            add_url_rule(
-                app,
+            api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}.geojson",
                 f"{t.name}_{cls_name}_geojson",
                 t.all(cls_name, extension="geojson"),
             )
-            add_url_rule(
-                app,
+            api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}.ndjson",
                 f"{t.name}_{cls_name}_ndjson",
                 t.all(cls_name, extension="ndjson"),
             )
-            add_url_rule(
-                app,
+            api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}.csv",
                 f"{t.name}_{cls_name}_csv",
                 t.all(cls_name, extension="csv"),
             )
-            add_url_rule(
-                app,
+            api.add_url_rule(
                 f"{prefix}/{t.name}/{cls_name}",
                 f"{t.name}_{cls_name}",
                 t.all(cls_name),
             )
-    add_url_rule(app, "/spec", "openapi-spec", make_spec(types))
+    api.add_url_rule("/spec", "openapi-spec", make_spec(types))
+
+
+make_routes(routes_root_dir)
 
 
 @api.route("/")
@@ -289,9 +286,6 @@ def index():
 
 @api.route("/recreate-routes")
 def recreate_routes():
-    from .app import AppReloader
-
-    AppReloader.reload()
 
     return jsonify({"result": "ok"})
 

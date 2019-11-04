@@ -17,7 +17,7 @@ class DynAPI(Flask):
         return SACore(dsn, app)
 
 
-def app_factory():
+def create_app():
 
     # import and register blueprints
     from .api import api, make_routes  # NoQA
@@ -25,27 +25,6 @@ def app_factory():
     app = DynAPI(__name__)
     CORS(app)
     app.register_blueprint(api)
-    make_routes(app, routes_root_dir)
+    # make_routes(app, routes_root_dir)
     return app
 
-
-class AppReloader(object):
-    _needs_reload = True
-
-    def __init__(self):
-        self.app = None # app_factory()
-
-    @classmethod
-    def reload(cls):
-        cls._needs_reload = True
-
-    def get_application(self):
-        if self._needs_reload:
-            self.app = app_factory()
-            self.__class__._needs_reload = False
-
-        return self.app
-
-    def __call__(self, environ, start_response):
-        app = self.get_application()
-        return app(environ, start_response)
