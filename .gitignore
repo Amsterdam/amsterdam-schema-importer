@@ -4,3 +4,4 @@ data/*
 
 *-workspace
 mapserver/*.map
+.arch
