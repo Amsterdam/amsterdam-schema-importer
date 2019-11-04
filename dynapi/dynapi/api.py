@@ -29,6 +29,9 @@ uri_path = environ["URI_PATH"]
 URI_VERSION_PREFIX = "latest"
 ureg = UnitRegistry()
 
+# XXX hmm, module level var. Maybe we need a central type reg, e.g. in Redis?
+_type_reg = {}
+
 
 class Type(aschema.Dataset):
     def __init__(self, *args, **kwargs):
@@ -43,13 +46,23 @@ class Type(aschema.Dataset):
         ]
         return id_fields and id_fields[0] or None
 
-    def _links(self, type_name, cls_name, id_=None):
+    @classmethod
+    def _fetch_type_from_name(cls, type_name):
+        global _type_reg
+        try:
+            return _type_reg[type_name]
+        except KeyError:
+            abort(404)
+
+    @classmethod
+    def _links(cls, type_name, cls_name, id_=None):
         tail = "" if id_ is None else f"/{id_}"
         prefix = f"{uri_path}{URI_VERSION_PREFIX}"
 
         return {"href": f"{prefix}/{type_name}/{cls_name}{tail}"}
 
-    def all(self, cls_name, extension="json"):
+    @classmethod
+    def all(cls):
         def fetch_clause_and_args():
             if "near" not in request.args.keys():
                 return "WHERE 1 = 1", ()
@@ -73,21 +86,22 @@ class Type(aschema.Dataset):
             args = near + [srid_near_coords, DB_SRID, distance]
             return where_clause, args + args[:-1]
 
-        def all_handler(where_clause, qargs):
+        def all_handler(type_name, class_name, where_clause, qargs, extension="jsoin"):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
+            type_ = cls._fetch_type_from_name(type_name)
 
             sql = ""
             if extension == "csv":
-                sql = f"SELECT *, ST_AsText(ST_Transform(geometry, {output_srid})) AS _geometry FROM {self.name}.{cls_name} {where_clause}"
+                sql = f"SELECT *, ST_AsText(ST_Transform(geometry, {output_srid})) AS _geometry FROM {type_name}.{class_name} {where_clause}"
             else:
-                sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS _geometry FROM {self.name}.{cls_name} {where_clause}"
+                sql = f"SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS _geometry FROM {type_name}.{class_name} {where_clause}"
 
             result = current_app.db.con.execute(sql, qargs)
 
             result_rows = []
             for row in result:
                 result_row = {}
-                for k,v in dict(row).items():
+                for k, v in dict(row).items():
                     if k == "geometry":
                         v = row["_geometry"]
                     elif k == "_geometry":
@@ -100,10 +114,10 @@ class Type(aschema.Dataset):
                     {
                         **dict(row),
                         "_links": {
-                            "self": self._links(
-                                self.name,
-                                cls_name,
-                                row[self.primary_names[cls_name].lower()],
+                            "self": cls._links(
+                                type_name,
+                                class_name,
+                                row[type_.primary_names[class_name].lower()],
                             )
                         },
                         "geometry": json.loads(row["geometry"]),
@@ -113,13 +127,12 @@ class Type(aschema.Dataset):
                 return jsonify(rows)
             elif extension == "ndjson":
                 rows = [
-                    {
-                        **dict(row),
-                        "geometry": json.loads(row["geometry"])
-                    }
+                    {**dict(row), "geometry": json.loads(row["geometry"])}
                     for row in result_rows
                 ]
-                return ("\n").join(json.dumps(row, separators=(",", ":")) for row in rows)
+                return ("\n").join(
+                    json.dumps(row, separators=(",", ":")) for row in rows
+                )
 
             elif extension == "csv":
                 rows = result_rows
@@ -151,17 +164,21 @@ class Type(aschema.Dataset):
             else:
                 abort(400)
 
-        def handler():
-            return all_handler(*fetch_clause_and_args())
+        def handler(type_name, class_name, extension="json"):
+            return all_handler(
+                type_name, class_name, *fetch_clause_and_args(), extension
+            )
 
         return handler
 
-    def one(self, cls_name, extension="json"):
-        def handler(cls_id):
+    @classmethod
+    def one(cls):
+        def handler(type_name, class_name, cls_id, extension="json"):
             output_srid = DB_SRID if extension == "json" else LAT_LON_SRID
-            primary_name = self.primary_names[cls_name]
+            type_ = cls._fetch_type_from_name(type_name)
+            primary_name = type_.primary_names[class_name]
             sql = f"""
-                SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {self.name}.{cls_name}
+                SELECT *, ST_AsGeoJSON(ST_Transform(geometry, {output_srid})) AS geometry FROM {type_name}.{class_name}
                     WHERE {primary_name} = %s
             """
             rows = [dict(row) for row in current_app.db.con.execute(sql, (cls_id,))]
@@ -172,7 +189,7 @@ class Type(aschema.Dataset):
                 return jsonify(
                     {
                         **row,
-                        "_links": {"self": self._links(self.name, cls_name, cls_id)},
+                        "_links": {"self": cls._links(type_name, class_name, cls_id)},
                         "geometry": json.loads(row["geometry"]),
                     }
                 )
@@ -226,68 +243,58 @@ def make_spec(types):
 
     return spec
 
-def add_url_rule(app, url, name, func):
-    try:
-        app.add_url_rule(url, name, func)
-    except AssertionError:
-        pass
 
-def make_routes(path):
-    p = Path(path)
-    prefix = f"/{URI_VERSION_PREFIX}"
+def fetch_types():
+    global _type_reg
+    _type_reg = {}
+    p = Path(routes_root_dir)
     types = []
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
         t = Type(schema)
         types.append(t)
-        for cls in t.classes:
-            cls_name = cls["id"]
-            api.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}/<cls_id>.geojson",
-                f"{t.name}_{cls_name}_id_geojson",
-                t.one(cls_name, extension="geojson"),
-            )
-            api.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}/<cls_id>",
-                f"{t.name}_{cls_name}_id",
-                t.one(cls_name),
-            )
-            api.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}.geojson",
-                f"{t.name}_{cls_name}_geojson",
-                t.all(cls_name, extension="geojson"),
-            )
-            api.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}.ndjson",
-                f"{t.name}_{cls_name}_ndjson",
-                t.all(cls_name, extension="ndjson"),
-            )
-            api.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}.csv",
-                f"{t.name}_{cls_name}_csv",
-                t.all(cls_name, extension="csv"),
-            )
-            api.add_url_rule(
-                f"{prefix}/{t.name}/{cls_name}",
-                f"{t.name}_{cls_name}",
-                t.all(cls_name),
-            )
+        _type_reg[t.name] = t
+
+
+@api.route("/refresh-types")
+def refresh_types():
+    fetch_types()
+    return jsonify({"result": "ok"})
+
+
+def make_routes():
+
+    fetch_types()
+    prefix = f"/{URI_VERSION_PREFIX}"
+
+    types = _type_reg.values()
+    for t in types:
+        api.add_url_rule(
+            f"{prefix}/<type_name>/<class_name>/<cls_id>.<extension>",
+            "one_handler_ext",
+            Type.one(),
+        )
+        api.add_url_rule(
+            f"{prefix}/<type_name>/<class_name>/<cls_id>", f"one_handler", Type.one()
+        )
+        api.add_url_rule(
+            f"{prefix}/<type_name>/<class_name>.<extension>",
+            "all_handler_ext",
+            Type.all(),
+        )
+        api.add_url_rule(
+            f"{prefix}/<type_name>/<class_name>", "all_handler", Type.all()
+        )
     api.add_url_rule("/spec", "openapi-spec", make_spec(types))
 
 
-make_routes(routes_root_dir)
+make_routes()
 
 
 @api.route("/")
 def index():
     openapi_spec_path = f"{uri_path}spec"
     return render_template("index.html", openapi_spec_path=openapi_spec_path)
-
-
-@api.route("/recreate-routes")
-def recreate_routes():
-
-    return jsonify({"result": "ok"})
 
 
 if __name__ == "__main__":
