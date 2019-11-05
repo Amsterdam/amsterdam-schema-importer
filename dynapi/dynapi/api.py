@@ -1,5 +1,7 @@
 from os import environ
 import functools
+import csv
+import io
 from dataclasses import dataclass
 
 
@@ -26,8 +28,14 @@ URI_VERSION_PREFIX = "latest"
 
 
 @dataclass
-class JSONRenderer:
+class Renderer:
     multiple: bool
+
+    def _one_row(self, row):
+        pass
+
+
+class JSONRenderer(Renderer):
 
     def _one_row(self, row):
         return {**dict(row)}
@@ -38,19 +46,20 @@ class JSONRenderer:
         return jsonify(self._one_row(content))
 
 
-@dataclass
-class CSVRenderer:
-    multiple: bool
+class CSVRenderer(Renderer):
 
     def __call__(self, content):
-        pass
-        # do things for CSV
-        # return CSV output
+        # XXX fix when content is empty
+        if not self.multiple:
+            content = [content]
+        mem_file = io.StringIO()
+        writer = csv.writer(mem_file)
+        writer.writerow(content[0].keys())
+        writer.writerows([row.values() for row in content])
+        return mem_file.getvalue()
 
 
-@dataclass
-class GeoJSONRenderer:
-    multiple: bool
+class GeoJSONRenderer(Renderer):
 
     def _one_row(self, row):
         return {
@@ -63,7 +72,6 @@ class GeoJSONRenderer:
 
     def __call__(self, content):
         # XXX add header for crs coord system
-        # XXX add geojson format
         if not self.multiple:
             return jsonify(self._one_row(content))
 
@@ -86,7 +94,7 @@ def get_renderer(extension, multiple):
 def handler(catalog_service_method, multiple, **kwargs):
     srid = const.DB_SRID
     geo_format = "geojson"
-    extension = kwargs.get("extension", "json").lower()
+    extension = kwargs.pop("extension", "json").lower()
     if extension == "csv":
         geo_format = "csv"
     if extension == "geojson":
@@ -98,7 +106,7 @@ def handler(catalog_service_method, multiple, **kwargs):
 def make_routes(path):
     prefix = f"/{URI_VERSION_PREFIX}"
 
-    catalog_context = services.CatalogContext(uri_path, URI_VERSION_PREFIX)
+    catalog_context = services.CatalogContext(uri_path, path, URI_VERSION_PREFIX)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(
