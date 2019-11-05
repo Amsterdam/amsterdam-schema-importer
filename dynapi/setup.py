@@ -10,6 +10,13 @@ setup(
     author_email="jan.murre@catalyz.nl",
     url="",
     packages=find_packages(),
-    install_requires=["Flask-API", "Flask-SACore", "Flask-Cors", "psycopg2", "SQLAlchemy", "pint"],
+    install_requires=[
+        "Flask-API",
+        "Flask-SACore",
+        "Flask-Cors",
+        "psycopg2-binary",
+        "SQLAlchemy",
+        "pint",
+    ],
     extras_require={"tests": ["pytest"]},
 )
