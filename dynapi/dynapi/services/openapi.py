@@ -12,13 +12,17 @@ from dynapi.domain.types import Type
 class OpenAPIContext:
     uri_path: str
     root_dir: str
-    uri_version_prefix: str
+    uri_version_prefix: st
 
     def compose_uri(self, type_name, class_name, *class_params):
         return  "/".join([
             self.uri_path + self.uri_version_prefix,
             type_name, class_name
         ] + list(class_params))
+
+    
+    def entity_repo(self, catalog,  collection):
+        return EntityRepository(catalog, collection)
 
 
 @dataclass
@@ -62,3 +66,9 @@ class OpenAPIService:
         return {
             "openapi": "3.0.0", "paths": paths, "info": info
         }
+
+    def get_document(self, catalog: str, collection: str, document_id: str):
+        self.context.repo(catalog, collection).get(document_id)
+
+    def list_resources(self, collection: str, **filter_params):
+        self.context.repo(collection).list(**filter_params)

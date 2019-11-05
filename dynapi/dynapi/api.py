@@ -3,6 +3,7 @@ import json
 import csv
 import io
 from pathlib import Path
+import functools
 
 from pint import UnitRegistry
 from pint.errors import UndefinedUnitError
@@ -39,9 +40,47 @@ def add_url_rule(app, url, name, func):
     except AssertionError:
         pass
 
-def make_routes(path):
+class JSONRenderer:
+    def __call__(self, response: list):
+        return jsonify(response)
+
+class CSVRenderer:
+    def __call__(self, response: list):
+        # do things for CSV
+        # return CSV output
+
+def get_renderer(extension):
+    {
+        'json': JSONRenderer(),
+        'csv': CSVRenderer(),
+    }[extension]
+
+
+def handler(cataglog_service_method, **kwargs):
+    renderer = get_renderer(
+        kwargs.get('extension', 'json').lower()
+    )
+
+    return renderer(
+        catalog_service_method(**kwargs)
+    )
+
+
+def make_routes(path, catalog_service):
     p = Path(path)
     prefix = f"/{URI_VERSION_PREFIX}"
+
+    api.add_url_rule(
+        f"{prefix}/<catalog>/<collection>/<document_id>",
+        functools.partial(
+            handler, catalog_service.get_document
+        )
+    )
+
+    api.add_url_rule(
+        f"{prefix}/<catalog>/<collection>/<document_id>.<extension>",
+        catalog_service.get_document
+    )
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
         t = types.Type(schema)
