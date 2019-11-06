@@ -4,6 +4,7 @@ import csv
 import io
 import json
 from dataclasses import dataclass
+from dataclasses import asdict
 
 
 from flask import Blueprint
@@ -14,6 +15,7 @@ from flask import Response
 
 
 from dynapi import services
+from dynapi.domain.types import Type
 from . import const
 
 
@@ -25,33 +27,49 @@ uri_path = environ["URI_PATH"]
 URI_VERSION_PREFIX = "latest"
 
 
+# XXX instead of explicitly stating multiple
+# we could also check in the renderer if the content is iterable
 @dataclass
 class Renderer:
     multiple: bool
 
-    def _one_row(self, row):
+    def render(self, resource):
         pass
 
 
 class JSONRenderer(Renderer):
-    def _one_row(self, row):
-        return {**row}
+    def get_self_link(self, resource):
+        # XXX maybe passthrough via resource
+        global uri_path
+        document_id = getattr(resource.fields, resource.primary_name)
+        return (
+            f"{uri_path}{Type.URI_VERSION_PREFIX}/{resource.catalog}/"
+            f"{resource.collection}/{document_id}"
+        )
+
+    def render(self, resource):
+
+        rendered = asdict(resource.fields)
+        rendered["_links"] = {"self": {"href": self.get_self_link(resource)}}
+        return rendered
 
     def __call__(self, content):
         if self.multiple:
-            return jsonify([self._one_row(row) for row in content])
-        return jsonify(self._one_row(content))
+            return jsonify([self.render(resource) for resource in content])
+        return jsonify(self.render(content))
 
 
 class NDJSONRenderer(Renderer):
-    def _one_row(self, row):
-        return json.dumps(row, separators=(",", ":"))
+    def render(self, resource):
+        return json.dumps(asdict(resource.fields), separators=(",", ":"))
 
     def __call__(self, content):
         if self.multiple:
-            response_content = "\n".join([self._one_row(row) for row in content])
+            response_content = "\n".join(
+                [self.render(resource) for resource in content]
+            )
         else:
-            response_content = self._one_row(content)
+            response_content = self.render(content)
         return Response(response_content, mimetype="application/x-ndjson")
 
 
@@ -59,11 +77,13 @@ class CSVRenderer(Renderer):
     def __call__(self, content):
         # XXX fix when content is empty
         if not self.multiple:
-            content = [content]
+            content = [asdict(content.fields)]
+        else:
+            content = [asdict(r.fields) for r in content]
         mem_file = io.StringIO()
         writer = csv.writer(mem_file)
         writer.writerow(content[0].keys())
-        writer.writerows([row.values() for row in content])
+        writer.writerows([d.values() for d in content])
 
         return Response(
             mem_file.getvalue(),
@@ -73,22 +93,23 @@ class CSVRenderer(Renderer):
 
 
 class GeoJSONRenderer(Renderer):
-    def _one_row(self, row):
+    def render(self, resource):
+        resource = asdict(resource.fields)
         return {
             "type": "Feature",
-            "id": row["id"],
-            "properties": {k: v for k, v in row.items() if k != "id"},
+            "id": resource["id"],
+            "properties": {k: v for k, v in resource.items() if k != "id"},
         }
 
     def __call__(self, content):
         # XXX add header for crs coord system
         if not self.multiple:
-            return jsonify(self._one_row(content))
+            return jsonify(self.render(content))
 
         return jsonify(
             {
                 "type": "FeatureCollection",
-                "features": [self._one_row(row) for row in content],
+                "features": [self.render(resource) for resource in content],
             }
         )
 
@@ -96,7 +117,7 @@ class GeoJSONRenderer(Renderer):
 def get_renderer(content_type, multiple):
     return {
         "application/json": JSONRenderer(multiple),
-        "applicatio/ndjson": NDJSONRenderer(multiple),
+        "application/ndjson": NDJSONRenderer(multiple),
         "text/csv": CSVRenderer(multiple),
         "application/geojson": GeoJSONRenderer(multiple),
     }.get(content_type, JSONRenderer(multiple))
