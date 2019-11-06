@@ -40,47 +40,11 @@ def add_url_rule(app, url, name, func):
     except AssertionError:
         pass
 
-class JSONRenderer:
-    def __call__(self, response: list):
-        return jsonify(response)
 
-class CSVRenderer:
-    def __call__(self, response: list):
-        # do things for CSV
-        # return CSV output
-
-def get_renderer(extension):
-    {
-        'json': JSONRenderer(),
-        'csv': CSVRenderer(),
-    }[extension]
-
-
-def handler(cataglog_service_method, **kwargs):
-    renderer = get_renderer(
-        kwargs.get('extension', 'json').lower()
-    )
-
-    return renderer(
-        catalog_service_method(**kwargs)
-    )
-
-
-def make_routes(path, catalog_service):
+def make_routes(path):
     p = Path(path)
     prefix = f"/{URI_VERSION_PREFIX}"
 
-    api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>/<document_id>",
-        functools.partial(
-            handler, catalog_service.get_document
-        )
-    )
-
-    api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>/<document_id>.<extension>",
-        catalog_service.get_document
-    )
     for schema_file in p.glob("**/*.schema.json"):
         schema = json.load(open(schema_file))
         t = types.Type(schema)
@@ -117,7 +81,7 @@ def make_routes(path, catalog_service):
                 t.all(cls_name),
             )
     oa_context = services.OpenAPIContext(
-        uri_path, path, URI_VERSION_PREFIX
+        uri_path, path, URI_VERSION_PREFIX,
     )
     oa_service = services.OpenAPIService(oa_context)
     api.add_url_rule("/spec", "openapi-spec", oa_service.create_openapi_spec)
