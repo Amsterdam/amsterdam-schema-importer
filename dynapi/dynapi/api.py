@@ -2,20 +2,18 @@ from os import environ
 import functools
 import csv
 import io
+import json
 from dataclasses import dataclass
 
 
 from flask import Blueprint
 from flask import jsonify
 from flask import render_template
+from flask import Response
 
 
 from dynapi import services
 from . import const
-
-
-LAT_LON_SRID = 4326
-DB_SRID = 28992
 
 
 api = Blueprint("v1", __name__)
@@ -36,7 +34,6 @@ class Renderer:
 
 
 class JSONRenderer(Renderer):
-
     def _one_row(self, row):
         return {**dict(row)}
 
@@ -46,8 +43,19 @@ class JSONRenderer(Renderer):
         return jsonify(self._one_row(content))
 
 
-class CSVRenderer(Renderer):
+class NDJSONRenderer(Renderer):
+    def _one_row(self, row):
+        return json.dumps(row, separators=(",", ":"))
 
+    def __call__(self, content):
+        if self.multiple:
+            response_content = "\n".join([self._one_row(row) for row in content])
+        else:
+            response_content = self._one_row(content)
+        return Response(response_content, mimetype="application/x-ndjson")
+
+
+class CSVRenderer(Renderer):
     def __call__(self, content):
         # XXX fix when content is empty
         if not self.multiple:
@@ -56,18 +64,20 @@ class CSVRenderer(Renderer):
         writer = csv.writer(mem_file)
         writer.writerow(content[0].keys())
         writer.writerows([row.values() for row in content])
-        return mem_file.getvalue()
+
+        return Response(
+            mem_file.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment;filename=output.csv"},
+        )
 
 
 class GeoJSONRenderer(Renderer):
-
     def _one_row(self, row):
         return {
             "type": "Feature",
             "id": row["id"],
-            "properties": {
-                k: v for k, v in dict(row).items() if k != "id"
-            },
+            "properties": {k: v for k, v in dict(row).items() if k != "id"},
         }
 
     def __call__(self, content):
@@ -86,6 +96,7 @@ class GeoJSONRenderer(Renderer):
 def get_renderer(extension, multiple):
     return {
         "json": JSONRenderer(multiple),
+        "ndjson": NDJSONRenderer(multiple),
         "csv": CSVRenderer(multiple),
         "geojson": GeoJSONRenderer(multiple),
     }[extension]
