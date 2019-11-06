@@ -35,7 +35,7 @@ class Renderer:
 
 class JSONRenderer(Renderer):
     def _one_row(self, row):
-        return {**dict(row)}
+        return {**row}
 
     def __call__(self, content):
         if self.multiple:
@@ -77,7 +77,7 @@ class GeoJSONRenderer(Renderer):
         return {
             "type": "Feature",
             "id": row["id"],
-            "properties": {k: v for k, v in dict(row).items() if k != "id"},
+            "properties": {k: v for k, v in row.items() if k != "id"},
         }
 
     def __call__(self, content):
