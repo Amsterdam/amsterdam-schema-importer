@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from flask import Blueprint
 from flask import jsonify
+from flask import request
 from flask import render_template
 from flask import Response
 
@@ -20,7 +21,6 @@ api = Blueprint("v1", __name__)
 
 routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
-ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
 uri_path = environ["URI_PATH"]
 URI_VERSION_PREFIX = "latest"
 
@@ -93,24 +93,27 @@ class GeoJSONRenderer(Renderer):
         )
 
 
-def get_renderer(extension, multiple):
+def get_renderer(content_type, multiple):
     return {
-        "json": JSONRenderer(multiple),
-        "ndjson": NDJSONRenderer(multiple),
-        "csv": CSVRenderer(multiple),
-        "geojson": GeoJSONRenderer(multiple),
-    }[extension]
+        "application/json": JSONRenderer(multiple),
+        "applicatio/ndjson": NDJSONRenderer(multiple),
+        "text/csv": CSVRenderer(multiple),
+        "application/geojson": GeoJSONRenderer(multiple),
+    }.get(content_type, JSONRenderer(multiple))
 
 
 def handler(catalog_service_method, multiple, **kwargs):
     srid = const.DB_SRID
     geo_format = "geojson"
-    extension = kwargs.pop("extension", "json").lower()
-    if extension == "csv":
+
+    content_type = request.headers.get("Accept", "application/json")
+    content_type = request.args.get("content-type", content_type)
+
+    if content_type == "text/csv":
         geo_format = "csv"
-    if extension == "geojson":
+    if content_type == "application/geojson":
         srid = const.LAT_LON_SRID
-    renderer = get_renderer(extension, multiple)
+    renderer = get_renderer(content_type, multiple)
     return renderer(catalog_service_method(srid=srid, geo_format=geo_format, **kwargs))
 
 
@@ -127,20 +130,8 @@ def make_routes(path):
     )
 
     api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>/<document_id>.<extension>",
-        "get_document_with_extension",
-        functools.partial(handler, catalog_service.get_document, False),
-    )
-
-    api.add_url_rule(
         f"{prefix}/<catalog>/<collection>",
         "get_collection",
-        functools.partial(handler, catalog_service.list_resources, True),
-    )
-
-    api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>.<extension>",
-        "get_collection_with_extension",
         functools.partial(handler, catalog_service.list_resources, True),
     )
 
