@@ -101,7 +101,7 @@ class OpenAPIService:
         return map(
             Type, get_datasets(self.context.root_dir)
         )
-    
+
     def create_openapi_spec(self):
         def f(*segs):
             return "_".join(map(str.lower, segs))
