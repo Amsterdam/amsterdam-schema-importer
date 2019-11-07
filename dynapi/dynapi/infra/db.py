@@ -3,6 +3,10 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import List
 
+# XXX Move flask dependencies to api.py
+# request.arg: should be filter_args in list()
+# abort: more specific Exception, handled in api.py
+# db connection: pass in through the context
 from flask import request
 from flask import current_app
 from flask import abort
