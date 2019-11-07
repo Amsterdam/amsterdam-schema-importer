@@ -45,7 +45,6 @@ class EntityRepository:
             )
             srid_near_coords = int(filter_params.get("srid", const.LAT_LON_SRID))
         except (ValueError, UndefinedUnitError):
-            # XXX How specific should error messages be?
             raise InvalidInputException()
 
         where_clause = f"""
@@ -84,5 +83,5 @@ class EntityRepository:
         where_clause, qargs = f" WHERE {self.primary_name} = %s", [document_id]
         resources = self._fetch_rows(srid, geo_format, where_clause, qargs)
         if not resources:
-            raise NotFoundException()  # XXX Do this here, or better in api.py?
+            raise NotFoundException()
         return resources[0]
