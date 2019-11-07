@@ -18,13 +18,8 @@ class DynAPI(Flask):
 
 
 def create_app():
-
-    # import and register blueprints
-    from .api import api, make_routes  # NoQA
-
+    from .api import api  # NoQA
     app = DynAPI(__name__)
     CORS(app)
     app.register_blueprint(api)
-    # make_routes(app, routes_root_dir)
     return app
-
