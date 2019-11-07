@@ -127,13 +127,14 @@ def handler(catalog_service_method, multiple, **kwargs):
 
     content_type = request.headers.get("Accept", "application/json")
     content_type = request.args.get("content-type", content_type)
+    filter_params = {**kwargs, **request.args}
 
     if content_type == "text/csv":
         geo_format = "csv"
     if content_type == "application/geojson":
         srid = const.LAT_LON_SRID
     renderer = get_renderer(content_type, multiple)
-    return renderer(catalog_service_method(srid=srid, geo_format=geo_format, **kwargs))
+    return renderer(catalog_service_method(srid=srid, geo_format=geo_format, **filter_params))
 
 
 def make_routes(path):
