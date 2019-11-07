@@ -1,19 +1,17 @@
 import json
 from dataclasses import dataclass
 from dataclasses import field
-from typing import List
+from typing import List, Callable, Any
 
-# XXX Move flask dependencies to api.py
-# request.arg: should be filter_args in list()
 # abort: more specific Exception, handled in api.py
 # db connection: pass in through the context
-from flask import current_app
-from flask import abort
 from pint import UnitRegistry
 from pint.errors import UndefinedUnitError
 
 from dynapi.domain.types import Resource, fetch_class_info
 from .. import const
+
+from ..exceptions import InvalidInputException, NotFoundException
 
 
 ureg = UnitRegistry()
@@ -25,6 +23,7 @@ class EntityRepository:
     collection: str
     uri_path: str
     root_dir: str
+    db_con_factory: Callable[[None], Any]
     primary_name: str = None
     properties: List[str] = field(default_factory=list)
 
@@ -47,7 +46,7 @@ class EntityRepository:
             srid_near_coords = int(filter_params.get("srid", const.LAT_LON_SRID))
         except (ValueError, UndefinedUnitError):
             # XXX How specific should error messages be?
-            abort(400)
+            raise InvalidInputException()
 
         where_clause = f"""
             WHERE ST_DWithin(geometry, ST_Transform(ST_GeomFromText('POINT(%s %s)', %s), %s), %s)
@@ -60,7 +59,7 @@ class EntityRepository:
         transform_fie = "ST_AsText" if geo_format == "text" else "ST_AsGeoJSON"
         sql = f"""SELECT *, {transform_fie}(ST_Transform(geometry, {srid})) AS _geometry
                 FROM {self.catalog}.{self.collection} {where_clause}"""
-        rows = [dict(row) for row in current_app.db.con.execute(sql, qargs)]
+        rows = [dict(row) for row in self.db_con_factory().execute(sql, qargs)]
 
         if not rows:
             return []
@@ -85,5 +84,5 @@ class EntityRepository:
         where_clause, qargs = f" WHERE {self.primary_name} = %s", [document_id]
         resources = self._fetch_rows(srid, geo_format, where_clause, qargs)
         if not resources:
-            abort(404)  # XXX Do this here, or better in api.py?
+            raise NotFoundException()  # XXX Do this here, or better in api.py?
         return resources[0]

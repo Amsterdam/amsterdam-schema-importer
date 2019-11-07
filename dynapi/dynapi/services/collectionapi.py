@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Callable, Any
 from ..infra.db import EntityRepository
 from .. import const
 
@@ -7,9 +8,12 @@ from .. import const
 class CatalogContext:
     uri_path: str
     root_dir: str
+    db_con_factory: Callable[[None], Any]
 
     def entity_repo(self, catalog, collection):
-        return EntityRepository(catalog, collection, self.uri_path, self.root_dir)
+        return EntityRepository(
+            catalog, collection, self.uri_path, self.root_dir, self.db_con_factory
+        )
 
 
 @dataclass

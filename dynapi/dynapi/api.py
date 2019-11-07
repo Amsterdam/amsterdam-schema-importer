@@ -10,12 +10,16 @@ from dataclasses import asdict
 from flask import Blueprint
 from flask import jsonify
 from flask import request
+from flask import current_app
 from flask import render_template
+from flask import abort
 from flask import Response
 
 
 from dynapi import services
 from . import const
+
+from .exceptions import InvalidInputException, NotFoundException
 
 
 api = Blueprint("v1", __name__)
@@ -134,12 +138,23 @@ def handler(catalog_service_method, multiple, **kwargs):
     if content_type == "application/geojson":
         srid = const.LAT_LON_SRID
     renderer = get_renderer(content_type, multiple)
-    return renderer(catalog_service_method(srid=srid, geo_format=geo_format, **filter_params))
+    try:
+        return renderer(
+            catalog_service_method(srid=srid, geo_format=geo_format, **filter_params)
+        )
+    except InvalidInputException:
+        abort(400)
+    except NotFoundException:
+        abort(404)
+
+
+def db_con_factory():
+    return current_app.db.con
 
 
 def make_routes(path):
 
-    catalog_context = services.CatalogContext(uri_path, path)
+    catalog_context = services.CatalogContext(uri_path, path, db_con_factory)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(
