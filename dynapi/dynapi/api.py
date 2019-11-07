@@ -37,11 +37,9 @@ class Renderer:
 
 class JSONRenderer(Renderer):
     def get_self_link(self, resource):
-        # XXX maybe passthrough via resource
-        global uri_path
         document_id = getattr(resource.fields, resource.primary_name)
         return (
-            f"{uri_path}{resource.catalog}/"
+            f"{resource.uri_path}{resource.catalog}/"
             f"{resource.collection}/{document_id}"
         )
 

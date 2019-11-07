@@ -87,9 +87,9 @@ class OpenAPIContext:
 
     def compose_uri(self, catalog, collection, *optional_elements):
         return  "/".join([
-            self.uri_path,
+            self.uri_path[1:],
             catalog, collection
-        ] + list(optional_elements))
+            ] + list(optional_elements))
 
 
 @dataclass

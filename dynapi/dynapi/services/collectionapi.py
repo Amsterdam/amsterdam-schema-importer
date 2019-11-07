@@ -9,7 +9,7 @@ class CatalogContext:
     root_dir: str
 
     def entity_repo(self, catalog, collection):
-        return EntityRepository(catalog, collection, self.root_dir)
+        return EntityRepository(catalog, collection, self.uri_path, self.root_dir)
 
 
 @dataclass

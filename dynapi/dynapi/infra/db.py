@@ -20,6 +20,7 @@ ureg = UnitRegistry()
 class EntityRepository:
     catalog: str
     collection: str
+    uri_path: str
     root_dir: str
     primary_name: str = None
     properties: List[str] = field(default_factory=list)
@@ -68,7 +69,7 @@ class EntityRepository:
 
         return [
             Resource(
-                self.catalog, self.collection, self.primary_name, row, self.properties
+                self.catalog, self.collection, self.uri_path, self.primary_name, row, self.properties
             )
             for row in rows
         ]
