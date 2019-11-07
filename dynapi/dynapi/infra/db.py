@@ -79,9 +79,7 @@ class EntityRepository:
 
     def get(self, document_id, srid=const.DB_SRID, geo_format="geojson"):
         where_clause, qargs = f" WHERE {self.primary_name} = %s", [document_id]
-        rows = self._fetch_rows(srid, geo_format, where_clause, qargs)
-        if not rows:
+        resources = self._fetch_rows(srid, geo_format, where_clause, qargs)
+        if not resources:
             abort(404)  # XXX Do this here, or better in api.py?
-        return Resource(
-            self.catalog, self.collection, self.primary_name, rows[0], self.properties
-        )
+        return resources[0]
