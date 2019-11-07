@@ -15,7 +15,6 @@ from flask import Response
 
 
 from dynapi import services
-from dynapi.domain.types import Type
 from . import const
 
 
@@ -24,7 +23,6 @@ api = Blueprint("v1", __name__)
 routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
 uri_path = environ["URI_PATH"]
-URI_VERSION_PREFIX = "latest"
 
 
 # XXX instead of explicitly stating multiple
@@ -43,7 +41,7 @@ class JSONRenderer(Renderer):
         global uri_path
         document_id = getattr(resource.fields, resource.primary_name)
         return (
-            f"{uri_path}{Type.URI_VERSION_PREFIX}/{resource.catalog}/"
+            f"{uri_path}{resource.catalog}/"
             f"{resource.collection}/{document_id}"
         )
 
@@ -102,16 +100,18 @@ class GeoJSONRenderer(Renderer):
         }
 
     def __call__(self, content):
-        # XXX add header for crs coord system
+        # For NL-API compliance add Content-Crs header
         if not self.multiple:
-            return jsonify(self.render(content))
-
-        return jsonify(
-            {
-                "type": "FeatureCollection",
-                "features": [self.render(resource) for resource in content],
-            }
-        )
+            response = jsonify(self.render(content))
+        else:
+            response = jsonify(
+                {
+                    "type": "FeatureCollection",
+                    "features": [self.render(resource) for resource in content],
+                }
+            )
+        response.headers["Content-Crs"] = "EPSG:4326"
+        return response
 
 
 def get_renderer(content_type, multiple):
@@ -139,24 +139,23 @@ def handler(catalog_service_method, multiple, **kwargs):
 
 
 def make_routes(path):
-    prefix = f"/{URI_VERSION_PREFIX}"
 
-    catalog_context = services.CatalogContext(uri_path, path, URI_VERSION_PREFIX)
+    catalog_context = services.CatalogContext(uri_path, path)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>/<document_id>",
+        f"/<catalog>/<collection>/<document_id>",
         "get_document",
         functools.partial(handler, catalog_service.get_document, False),
     )
 
     api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>",
+        f"/<catalog>/<collection>",
         "get_collection",
         functools.partial(handler, catalog_service.list_resources, True),
     )
 
-    oa_context = services.OpenAPIContext(uri_path, path, URI_VERSION_PREFIX)
+    oa_context = services.OpenAPIContext(uri_path, path)
     oa_service = services.OpenAPIService(oa_context)
     api.add_url_rule("/spec", "openapi-spec", oa_service.create_openapi_spec)
 

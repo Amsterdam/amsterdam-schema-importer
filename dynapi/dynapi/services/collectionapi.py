@@ -7,7 +7,6 @@ from .. import const
 class CatalogContext:
     uri_path: str
     root_dir: str
-    uri_version_prefix: str
 
     def entity_repo(self, catalog, collection):
         return EntityRepository(catalog, collection, self.root_dir)

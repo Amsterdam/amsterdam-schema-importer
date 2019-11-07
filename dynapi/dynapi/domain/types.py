@@ -11,7 +11,6 @@ from dynapi.lib import get_datasets
 
 class Type(aschema.Dataset):
     ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
-    URI_VERSION_PREFIX = "latest"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
