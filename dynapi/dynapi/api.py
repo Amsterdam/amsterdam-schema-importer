@@ -117,6 +117,9 @@ class GeoJSONRenderer(Renderer):
 
 
 def get_renderer(content_type, multiple):
+    # XXX 7.2.10 API-25: Check the Content-Type header settings
+    # Check the Content-Type header is application/json or another supported
+    # content types, otherwise send the HTTP status code 415 Unsupported Media Type.
     return {
         "application/json": JSONRenderer(multiple),
         "application/ndjson": NDJSONRenderer(multiple),

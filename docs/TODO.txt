@@ -1,0 +1,36 @@
+Things to implement from NL-API core
+
+7.2.2 API-12: Allow access to an API only if an API key is provided
+7.2.3 API-13: Accept tokens as HTTP headers only
+7.2.4 API-14: Use OAuth 2.0 for authorisation
+7.2.5 API-15: Use PKIoverheid certificates for access-restricted or purpose-limited API authentication
+7.2.9 API-24: Support content negotiation
+7.2.10 API-25: Check the Content-Type header settings
+7.2.15 API-30: Use query parameters corresponding to the queryable fields
+7.2.16 API-31: Use the query parameter sorteer to sort
+7.2.21 API-36: Provide a POST endpoint for GEO queries
+7.2.23 API-38: Put results of a global spatial query in the relevant geometric context
+In case of a global query /api/v1/_zoek, results should be placed in the relevant geometric context, because results from different collections are retrieved. Express the name of the collection to which the results belongs in the singular form using the property type.
+
+7.2.25 API-40: Pass the coordinate reference system (CRS) of the request and the response in the headers
+The coordinate reference system (CRS) for both the request and the response are passed as part of the request headers and reponse headers. In case this header is missing, send the HTTP status code 412 Precondition Failed.
+
+7.2.26 API-41: Use content negotiation to serve different CRSs
+The CRS for the geometry in the response body is defined using the Accept-Crs header. In case the API does not support the requested CRS, send the HTTP status code 406 Not Acceptable.
+
+7.2.28 API-43: Apply caching to improve performance
+For caching apply the default HTTP caching mechanisms using a few additional HTTP headers (ETag or Last-Modified) and functionality to determine wether a few specific HTTP headers are supplied (If-None-Match or If-Modified-Since).
+
+7.2.29 API-44: Apply rate limiting
+To prevent server overload and to guarantee a high service level, apply rate limiting to API requests.
+
+7.2.30 API-45: Provide rate limiting information
+Use the HTTP header X-Rate-Limit to inform users of rate limits. In case the rate limits are exceeded, send the HTTP status code 429 Too Many Requests.
+
+7.2.31 API-46: Use default error handling
+API support the default error messages of the HTTP 400 and 500 status code ranges, including the parsable JSON representation (RFC-7807).
+
+7.2.33 API-49: Use public API-keys
+In JavaScript, only use restricted API-keys, linked to specific characteristics of the client-application (web application or mobile application), e.g. a clientId and/or referring URL.
+
+7.2.34 API-50: Use CORS to control access
