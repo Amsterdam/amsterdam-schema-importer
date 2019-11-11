@@ -138,15 +138,14 @@ class DataClassToOpenAPI:
 class OpenAPIContext:
     uri_path: str
     root_dir: str
-    uri_version_prefix: str
 
     def compose_uri(self, catalog, collection, *optional_elements):
         return  "/".join([
-            self.uri_path + self.uri_version_prefix,
+            self.uri_path[1:],
             catalog, collection
-        ] + list(optional_elements))
+            ] + list(optional_elements))
 
-    
+
 @dataclass
 class OpenAPIService:
     context: OpenAPIContext

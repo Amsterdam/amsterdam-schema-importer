@@ -4,54 +4,72 @@ import csv
 import io
 import json
 from dataclasses import dataclass
+from dataclasses import asdict
 
 
 from flask import Blueprint
 from flask import jsonify
+from flask import request
+from flask import current_app
 from flask import render_template
+from flask import abort
 from flask import Response
 
 
 from dynapi import services
 from . import const
 
+from .exceptions import InvalidInputException, NotFoundException
+
 
 api = Blueprint("v1", __name__)
 
 routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
-ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
 uri_path = environ["URI_PATH"]
-URI_VERSION_PREFIX = "latest"
 
 
+# XXX instead of explicitly stating multiple
+# we could also check in the renderer if the content is iterable
 @dataclass
 class Renderer:
     multiple: bool
 
-    def _one_row(self, row):
+    def render(self, resource):
         pass
 
 
 class JSONRenderer(Renderer):
-    def _one_row(self, row):
-        return {**row}
+    def get_self_link(self, resource):
+        document_id = getattr(resource.fields, resource.collection.primary_name)
+        return (
+            f"{uri_path}{resource.collection.coll_ref.catalog}/"
+            f"{resource.collection.coll_ref.collection}/{document_id}"
+        )
+
+    def render(self, resource):
+
+        rendered = asdict(resource.fields)
+        rendered["_links"] = {"self": {"href": self.get_self_link(resource)}}
+        return rendered
 
     def __call__(self, content):
         if self.multiple:
-            return jsonify([self._one_row(row) for row in content])
-        return jsonify(self._one_row(content))
+            return jsonify([self.render(resource) for resource in content])
+        return jsonify(self.render(content))
 
 
 class NDJSONRenderer(Renderer):
-    def _one_row(self, row):
-        return json.dumps(row, separators=(",", ":"))
+    def render(self, resource):
+        return json.dumps(asdict(resource.fields), separators=(",", ":"))
 
     def __call__(self, content):
         if self.multiple:
-            response_content = "\n".join([self._one_row(row) for row in content])
+            response_content = "\n".join(
+                [self.render(resource) for resource in content]
+            )
         else:
-            response_content = self._one_row(content)
+            response_content = self.render(content)
         return Response(response_content, mimetype="application/x-ndjson")
 
 
@@ -59,11 +77,13 @@ class CSVRenderer(Renderer):
     def __call__(self, content):
         # XXX fix when content is empty
         if not self.multiple:
-            content = [content]
+            content = [asdict(content.fields)]
+        else:
+            content = [asdict(r.fields) for r in content]
         mem_file = io.StringIO()
         writer = csv.writer(mem_file)
         writer.writerow(content[0].keys())
-        writer.writerows([row.values() for row in content])
+        writer.writerows([d.values() for d in content])
 
         return Response(
             mem_file.getvalue(),
@@ -73,78 +93,86 @@ class CSVRenderer(Renderer):
 
 
 class GeoJSONRenderer(Renderer):
-    def _one_row(self, row):
+    def render(self, resource):
+        resource = asdict(resource.fields)
         return {
             "type": "Feature",
-            "id": row["id"],
-            "properties": {k: v for k, v in row.items() if k != "id"},
+            "id": resource["id"],
+            "properties": {k: v for k, v in resource.items() if k != "id"},
         }
 
     def __call__(self, content):
-        # XXX add header for crs coord system
+        # For NL-API compliance add Content-Crs header
         if not self.multiple:
-            return jsonify(self._one_row(content))
+            response = jsonify(self.render(content))
+        else:
+            response = jsonify(
+                {
+                    "type": "FeatureCollection",
+                    "features": [self.render(resource) for resource in content],
+                }
+            )
+        response.headers["Content-Crs"] = "EPSG:4326"
+        return response
 
-        return jsonify(
-            {
-                "type": "FeatureCollection",
-                "features": [self._one_row(row) for row in content],
-            }
-        )
 
-
-def get_renderer(extension, multiple):
+def get_renderer(content_type, multiple):
+    # XXX 7.2.10 API-25: Check the Content-Type header settings
+    # Check the Content-Type header is application/json or another supported
+    # content types, otherwise send the HTTP status code 415 Unsupported Media Type.
     return {
-        "json": JSONRenderer(multiple),
-        "ndjson": NDJSONRenderer(multiple),
-        "csv": CSVRenderer(multiple),
-        "geojson": GeoJSONRenderer(multiple),
-    }[extension]
+        "application/json": JSONRenderer(multiple),
+        "application/ndjson": NDJSONRenderer(multiple),
+        "text/csv": CSVRenderer(multiple),
+        "application/geojson": GeoJSONRenderer(multiple),
+    }.get(content_type, JSONRenderer(multiple))
 
 
 def handler(catalog_service_method, multiple, **kwargs):
     srid = const.DB_SRID
     geo_format = "geojson"
-    extension = kwargs.pop("extension", "json").lower()
-    if extension == "csv":
+
+    content_type = request.headers.get("Accept", "application/json")
+    content_type = request.args.get("content-type", content_type)
+    filter_params = {**kwargs, **request.args}
+
+    if content_type == "text/csv":
         geo_format = "csv"
-    if extension == "geojson":
+    if content_type == "application/geojson":
         srid = const.LAT_LON_SRID
-    renderer = get_renderer(extension, multiple)
-    return renderer(catalog_service_method(srid=srid, geo_format=geo_format, **kwargs))
+    renderer = get_renderer(content_type, multiple)
+    try:
+        return renderer(
+            catalog_service_method(srid=srid, geo_format=geo_format, **filter_params)
+        )
+    except InvalidInputException:
+        abort(400)
+    except NotFoundException:
+        abort(404)
+
+
+def db_con_factory():
+    return current_app.db.con
 
 
 def make_routes(path):
-    prefix = f"/{URI_VERSION_PREFIX}"
 
-    catalog_context = services.CatalogContext(uri_path, path, URI_VERSION_PREFIX)
+    catalog_context = services.CatalogContext(path, db_con_factory)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>/<document_id>",
+        f"/<catalog>/<collection>/<document_id>",
         "get_document",
         functools.partial(handler, catalog_service.get_document, False),
     )
 
     api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>/<document_id>.<extension>",
-        "get_document_with_extension",
-        functools.partial(handler, catalog_service.get_document, False),
-    )
-
-    api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>",
+        f"/<catalog>/<collection>",
         "get_collection",
         functools.partial(handler, catalog_service.list_resources, True),
     )
 
-    api.add_url_rule(
-        f"{prefix}/<catalog>/<collection>.<extension>",
-        "get_collection_with_extension",
-        functools.partial(handler, catalog_service.list_resources, True),
-    )
-
-    oa_context = services.OpenAPIContext(uri_path, path, URI_VERSION_PREFIX)
+    oa_context = services.OpenAPIContext(uri_path, path)
     oa_service = services.OpenAPIService(oa_context)
     api.add_url_rule("/spec", "openapi-spec", oa_service.create_openapi_spec)
 

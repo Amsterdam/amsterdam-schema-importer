@@ -1,30 +1,28 @@
 from dataclasses import dataclass
+from typing import Callable, Any
+from ..domain.types import Collection, CollectionRef
 from ..infra.db import EntityRepository
-from dynapi.lib import get_datasets
-from dynapi.domain.types import Type
+from ..infra.sql import SQLStrategy
 from .. import const
 
 
 @dataclass
 class CatalogContext:
-    uri_path: str
     root_dir: str
-    uri_version_prefix: str
+    db_con_factory: Callable[[None], Any]
 
-    def get_self_link(self, catalog, collection, document_id):
-        return f"/{self.uri_path}/{self.uri_version_prefix}/{catalog}/{collection}/{document_id}"
-
-    def entity_repo(self, catalog, collection):
-        return EntityRepository(catalog, collection, self.root_dir)
+    def entity_repo(self, catalog_str, collection_str):
+        coll_ref= CollectionRef(catalog_str, collection_str)
+        collection = Collection(coll_ref, self.root_dir)
+        data_strategy = SQLStrategy(coll_ref, self.db_con_factory)
+        return EntityRepository(
+            collection, self.root_dir, data_strategy
+        )
 
 
 @dataclass
 class CatalogService:
     context: CatalogContext
-
-    def _get_primary_map(self):
-        types = (Type(schema) for schema in get_datasets(self.context.root_dir))
-        return {t.name: t.primary_names for t in types}
 
     def get_document(
         self,

@@ -50,6 +50,12 @@ RETURNS SETOF example.steden AS $$
 $$ LANGUAGE sql STABLE;
 ~~~
 
+## Compliance
+
+The REST API has been developed in compliance with the NL API standard. On top of that the following extensions have been added:
+
+- Near search based op query parameters in the GET request.
+
 See also:
 
 - https://blog.hasura.io/graphql-schema-on-postgres-with-foreign-keys-and-without-foreign-keys-95f6b2715478/
