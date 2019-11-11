@@ -43,8 +43,8 @@ class JSONRenderer(Renderer):
     def get_self_link(self, resource):
         document_id = getattr(resource.fields, resource.collection.primary_name)
         return (
-            f"{uri_path}{resource.collection.catalog}/"
-            f"{resource.collection.collection}/{document_id}"
+            f"{uri_path}{resource.collection.coll_ref.catalog}/"
+            f"{resource.collection.coll_ref.collection}/{document_id}"
         )
 
     def render(self, resource):

@@ -24,7 +24,6 @@ class Type(aschema.Dataset):
         ]
         return id_fields and id_fields[0] or None
 
-
     @classmethod
     def fetch_class_info(cls, root_dir: str, catalog: str, collection: str):
         current_type = current_cls = None
@@ -48,16 +47,21 @@ class Type(aschema.Dataset):
 
 
 @dataclass
-class Collection:
+class CollectionRef:
     catalog: str
     collection: str
+
+
+@dataclass
+class Collection:
+    coll_ref: CollectionRef
     root_dir: str
     primary_name: str = None
     properties: List[Any] = field(default_factory=list)
 
     def __post_init__(self):
         self.primary_name, self.properties = Type.fetch_class_info(
-            self.root_dir, self.catalog, self.collection
+            self.root_dir, self.coll_ref.catalog, self.coll_ref.collection
         )
 
 

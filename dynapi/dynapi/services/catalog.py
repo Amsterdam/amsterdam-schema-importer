@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable, Any
-from ..domain.types import Collection
+from ..domain.types import Collection, CollectionRef
 from ..infra.db import EntityRepository, SQLStrategy
 from .. import const
 
@@ -11,8 +11,9 @@ class CatalogContext:
     db_con_factory: Callable[[None], Any]
 
     def entity_repo(self, catalog_str, collection_str):
-        collection = Collection(catalog_str, collection_str, self.root_dir)
-        data_strategy = SQLStrategy(collection, self.db_con_factory)
+        coll_ref= CollectionRef(catalog_str, collection_str)
+        collection = Collection(coll_ref, self.root_dir)
+        data_strategy = SQLStrategy(coll_ref, self.db_con_factory)
         return EntityRepository(
             collection, self.root_dir, data_strategy
         )
