@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Callable, Any
 from ..domain.types import Collection, CollectionRef
-from ..infra.db import EntityRepository, SQLStrategy
+from ..infra.db import EntityRepository
+from ..infra.sql import SQLStrategy
 from .. import const
 
 
