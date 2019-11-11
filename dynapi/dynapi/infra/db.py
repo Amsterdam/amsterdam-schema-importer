@@ -75,7 +75,7 @@ class SQLStrategy:
 class EntityRepository:
     collection: Collection
     root_dir: str
-    data_strategy: class
+    data_strategy: Any
 
     def list(self, srid=const.DB_SRID, geo_format="geojson", **filter_params):
         return self.data_strategy.list(srid, geo_format, **filter_params)
