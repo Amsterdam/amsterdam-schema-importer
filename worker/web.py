@@ -1,10 +1,10 @@
 from flask import Flask, request
 app = Flask(__name__)
 
-from .app import main
+from . import app as executors
 
 
 @app.route('/mapfiles', methods=['POST'])
 def create_mapfile():
     json_str = request.json
-    return main(json_str)
+    return executors.CreateMapfileFromDataset()(json_str)
