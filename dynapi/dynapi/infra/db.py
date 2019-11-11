@@ -1,14 +1,13 @@
 import json
 from dataclasses import dataclass
-from dataclasses import field
-from typing import List, Callable, Any
+from typing import Callable, Any
 
 # abort: more specific Exception, handled in api.py
 # db connection: pass in through the context
 from pint import UnitRegistry
 from pint.errors import UndefinedUnitError
 
-from dynapi.domain.types import Resource, fetch_class_info
+from dynapi.domain.types import Resource, Collection
 from .. import const
 
 from ..exceptions import InvalidInputException, NotFoundException
@@ -18,18 +17,9 @@ ureg = UnitRegistry()
 
 
 @dataclass
-class EntityRepository:
-    catalog: str
-    collection: str
-    root_dir: str
+class SQLStrategy:
+    collection: Collection
     db_con_factory: Callable[[None], Any]
-    primary_name: str = None
-    properties: List[str] = field(default_factory=list)
-
-    def __post_init__(self):
-        self.primary_name, self.properties = fetch_class_info(
-            self.root_dir, self.catalog, self.collection
-        )
 
     def fetch_near_clause_and_args(self, **filter_params):
         if "near" not in filter_params.keys():
@@ -56,7 +46,7 @@ class EntityRepository:
     def _fetch_rows(self, srid, geo_format, where_clause, qargs):
         transform_fie = "ST_AsText" if geo_format == "text" else "ST_AsGeoJSON"
         sql = f"""SELECT *, {transform_fie}(ST_Transform(geometry, {srid})) AS _geometry
-                FROM {self.catalog}.{self.collection} {where_clause}"""
+                FROM {self.collection.catalog}.{self.collection.collection} {where_clause}"""
         rows = [dict(row) for row in self.db_con_factory().execute(sql, qargs)]
 
         if not rows:
@@ -67,20 +57,28 @@ class EntityRepository:
             row["geometry"] = tr(row["_geometry"])
             del row["_geometry"]
 
-        return [
-            Resource(
-                self.catalog, self.collection, self.primary_name, row, self.properties
-            )
-            for row in rows
-        ]
+        return [Resource(self.collection, row) for row in rows]
 
     def list(self, srid=const.DB_SRID, geo_format="geojson", **filter_params):
         where_clause, qargs = self.fetch_near_clause_and_args(**filter_params)
         return self._fetch_rows(srid, geo_format, where_clause, qargs)
 
     def get(self, document_id, srid=const.DB_SRID, geo_format="geojson"):
-        where_clause, qargs = f" WHERE {self.primary_name} = %s", [document_id]
+        where_clause, qargs = f" WHERE {self.collection.primary_name} = %s", [document_id]
         resources = self._fetch_rows(srid, geo_format, where_clause, qargs)
         if not resources:
             raise NotFoundException()
         return resources[0]
+
+
+@dataclass
+class EntityRepository:
+    collection: Collection
+    root_dir: str
+    data_strategy: class
+
+    def list(self, srid=const.DB_SRID, geo_format="geojson", **filter_params):
+        return self.data_strategy.list(srid, geo_format, **filter_params)
+
+    def get(self, document_id, srid=const.DB_SRID, geo_format="geojson"):
+        return self.data_strategy.get(document_id, srid, geo_format)

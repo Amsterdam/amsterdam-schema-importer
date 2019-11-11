@@ -25,37 +25,49 @@ class Type(aschema.Dataset):
         return id_fields and id_fields[0] or None
 
 
-def fetch_class_info(root_dir: str, catalog: str, collection: str):
-    current_type = current_cls = None
+    @classmethod
+    def fetch_class_info(cls, root_dir: str, catalog: str, collection: str):
+        current_type = current_cls = None
 
-    properties = []
-    types = (Type(schema) for schema in get_datasets(root_dir))
-    for t in types:
-        if t.name == catalog:
-            current_type = t
-            for cls in t.classes:
-                if cls["id"] == collection:
-                    current_cls = cls
-                    # XXX excluding class/datasets should not be hardcoded
-                    properties = [
-                        k.lower()
-                        for k in cls["schema"]["properties"].keys()
-                        if k not in set(["class", "dataset"])
-                    ]
-    primary_name = current_type.primary_name(current_cls)
-    return primary_name, properties
+        properties = []
+        types = (cls(schema) for schema in get_datasets(root_dir))
+        for t in types:
+            if t.name == catalog:
+                current_type = t
+                for tcls in t.classes:
+                    if tcls["id"] == collection:
+                        current_cls = tcls
+                        # XXX excluding class/datasets should not be hardcoded
+                        properties = [
+                            k.lower()
+                            for k in tcls["schema"]["properties"].keys()
+                            if k not in set(["class", "dataset"])
+                        ]
+        primary_name = current_type.primary_name(current_cls)
+        return primary_name, properties
+
+
+@dataclass
+class Collection:
+    catalog: str
+    collection: str
+    root_dir: str
+    primary_name: str = None
+    properties: List[Any] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.primary_name, self.properties = Type.fetch_class_info(
+            self.root_dir, self.catalog, self.collection
+        )
 
 
 @dataclass
 class Resource:
-    catalog: str
-    collection: str
-    primary_name: str
+    collection: Collection
     row: InitVar[Any] = None
-    properties: InitVar[Any] = []
-    fields: List[Any] = field(default_factory=list)
 
-    def __post_init__(self, row, properties):
+    def __post_init__(self, row):
+        properties = self.collection.properties
         fields_class = make_dataclass('Fields', properties)
         self.fields = fields_class(
             **{k: v for k, v in row.items() if k in set(properties)}
