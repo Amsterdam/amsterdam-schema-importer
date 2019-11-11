@@ -55,6 +55,7 @@ class Components:
         default_factory=dict
     )
 
+
 @dataclass
 class OpenAPI:
     info: Info
@@ -81,6 +82,59 @@ class OpenAPI:
 
 
 @dataclass
+class DataClassToOpenAPI:
+    openapi: OpenAPI
+    compose_uri: typing.Callable
+
+    def __call__(self, catalog: Type, datacls: dict):
+        def f(*segs):
+            return "_".join(map(str.lower, segs))
+
+        primary_name = catalog.primary_names[datacls["id"]]
+        cls_name = datacls["id"]
+        primary_name_description = datacls["schema"]["properties"][primary_name][
+            "description"
+        ]
+        self.openapi.components.schemas[cls_name] = datacls['schema']
+        self.openapi.add_path_item(
+            self.compose_uri(
+                catalog.name, cls_name, f"{{{primary_name}}}"
+            ),
+            PathItem(
+                get=Operation(
+                    operationId=f("get", cls_name),
+                    responses={
+                        200: Response(
+                            description=datacls["id"],
+                            content={
+                                'application/json': {
+                                    "schema": {
+                                        "$ref": f"#/components/schemas/{cls_name}"
+                                    }
+                                }
+                            }
+                        )
+                    }
+                ),
+                parameters=[
+                    Parameter(
+                        name=primary_name,
+                        in_="path",
+                        required=True,
+                        description=primary_name_description,
+                    ),
+                    Parameter(
+                        name="format",
+                        in_="query",
+                        required=False,
+                        description="Format of the response",
+                    )
+                ]
+            )
+        )
+
+
+@dataclass
 class OpenAPIContext:
     uri_path: str
     root_dir: str
@@ -103,51 +157,17 @@ class OpenAPIService:
         )
 
     def create_openapi_spec(self):
-        def f(*segs):
-            return "_".join(map(str.lower, segs))
-
         openapi = OpenAPI(
             info=Info(
                 title="OpenAPI Amsterdam Schema",
                 version="0.0.1",
             )
         )
+        mutator = DataClassToOpenAPI(
+            openapi, self.context.compose_uri
+        )
         for catalog in self._get_types():
             for cls in catalog.classes:
-                cls_name = cls["id"]
-                primary_name = catalog.primary_names[cls_name]
-                primary_name_description = cls["schema"]["properties"][primary_name][
-                    "description"
-                ]
-                openapi.components.schemas[cls_name] = cls['schema']
-                openapi.add_path_item(
-                    self.context.compose_uri(
-                        catalog.name, cls_name, f"{{{primary_name}}}"
-                    ),
-                    PathItem(
-                        get=Operation(
-                            operationId=f("get", cls_name),
-                            responses={
-                                200: Response(
-                                    description=cls["id"],
-                                    content={
-                                        'application/json': {
-                                            "schema": {
-                                                "$ref": f"#/components/schemas/{cls_name}"
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-                        ),
-                        parameters=[
-                            Parameter(
-                                name=primary_name,
-                                in_="path",
-                                required=True,
-                                description=primary_name_description,
-                            )
-                        ]
-                    )
-                )
+                mutator(catalog, cls)
+            
         return openapi.dict()
