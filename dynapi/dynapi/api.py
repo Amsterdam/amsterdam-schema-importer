@@ -43,7 +43,7 @@ class JSONRenderer(Renderer):
     def get_self_link(self, resource):
         document_id = getattr(resource.fields, resource.primary_name)
         return (
-            f"{resource.uri_path}{resource.catalog}/"
+            f"{uri_path}{resource.catalog}/"
             f"{resource.collection}/{document_id}"
         )
 
@@ -157,7 +157,7 @@ def db_con_factory():
 
 def make_routes(path):
 
-    catalog_context = services.CatalogContext(uri_path, path, db_con_factory)
+    catalog_context = services.CatalogContext(path, db_con_factory)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(

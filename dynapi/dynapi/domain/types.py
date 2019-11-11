@@ -50,7 +50,6 @@ def fetch_class_info(root_dir: str, catalog: str, collection: str):
 class Resource:
     catalog: str
     collection: str
-    uri_path: str
     primary_name: str
     row: InitVar[Any] = None
     properties: InitVar[Any] = []

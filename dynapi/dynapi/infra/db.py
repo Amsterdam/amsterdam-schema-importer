@@ -21,7 +21,6 @@ ureg = UnitRegistry()
 class EntityRepository:
     catalog: str
     collection: str
-    uri_path: str
     root_dir: str
     db_con_factory: Callable[[None], Any]
     primary_name: str = None
@@ -70,7 +69,7 @@ class EntityRepository:
 
         return [
             Resource(
-                self.catalog, self.collection, self.uri_path, self.primary_name, row, self.properties
+                self.catalog, self.collection, self.primary_name, row, self.properties
             )
             for row in rows
         ]

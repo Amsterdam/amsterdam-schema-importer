@@ -6,13 +6,12 @@ from .. import const
 
 @dataclass
 class CatalogContext:
-    uri_path: str
     root_dir: str
     db_con_factory: Callable[[None], Any]
 
     def entity_repo(self, catalog, collection):
         return EntityRepository(
-            catalog, collection, self.uri_path, self.root_dir, self.db_con_factory
+            catalog, collection, self.root_dir, self.db_con_factory
         )
 
 
