@@ -1,8 +1,3 @@
-\import logging
-import os
-import sys
-import typing
-
 from dataservices import amsterdam_schema
 from .interfaces import json_
 from .generators.mapfile import (
@@ -13,20 +8,14 @@ from .interfaces.mapfile.serializers import (
 )
 
 
-log = logging.getLogger(__name__)
+class CreateMapfileFromDataset:
+    """ Creates a Mapfile from a dataset in JSON """
 
-
-def main(dataset_json):
-    dataset = amsterdam_schema.Dataset(dataset_json)
-    return MapfileGenerator(
+    _dataset_from_json = amsterdam_schema.Dataset
+    _generator = MapfileGenerator(
         serializer=MappyfileSerializer()
-    ).serialize(dataset)
+    )
 
-
-if __name__ == '__main__':
-    fp = sys.argv[1]
-    with open(fp, "r") as fh:
-        json =json_.load(fh)
-        print(main(
-            json
-        ))
+    def __call__(self, dataset_json: str):
+        dataset = self._dataset_from_json(dataset_json)
+        return self._generator(dataset)
