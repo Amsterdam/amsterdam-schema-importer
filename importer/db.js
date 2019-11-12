@@ -52,7 +52,7 @@ const createAndBulkImport = (createSql, tables, stream) => db.tx('transaction', 
       }
 
       return {
-        name: util.toSnakeCase(column), // in DB
+        name: column, // in DB
         prop: column, // in source
         // TODO: use actual type, not the column name!
         ...(isGeometry ? {
