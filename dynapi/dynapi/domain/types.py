@@ -38,7 +38,7 @@ class Type(aschema.Dataset):
                         current_cls = tcls
                         # XXX excluding class/datasets should not be hardcoded
                         properties = [
-                            k.lower()
+                            k
                             for k in tcls["schema"]["properties"].keys()
                             if k not in set(["class", "dataset"])
                         ]
