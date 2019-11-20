@@ -16,7 +16,7 @@ class CatalogContext:
         collection = Collection(coll_ref, self.schema_repo_url)
         data_strategy = SQLStrategy(coll_ref, self.db_con_factory)
         return EntityRepository(
-            collection, self.schema_repo_url, data_strategy
+            collection, data_strategy
         )
 
 
