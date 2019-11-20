@@ -1,11 +1,12 @@
 import json
+from unittest import mock
 
 import ndjson
 import pytest
 
 from datasets.service import (
     DatasetService, CreateDataset, DatasetCreated,
-    InsertRow
+    InsertRow, DatasetSchema
 )
 
 
@@ -21,9 +22,15 @@ def schema_dict():
         return json.load(fh)
 
 
+class MockedDatasetService(DatasetService):
+    def _store_schema(self, schema): pass
+    def _load_schema(self, schema_id):
+        return mock.MagicMock(id=schema_id)
+
+
 @pytest.fixture
 def service():
-    return DatasetService()
+    return MockedDatasetService()
 
 
 @pytest.fixture

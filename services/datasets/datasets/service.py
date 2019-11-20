@@ -54,10 +54,12 @@ class DatasetService:
          see https://github.com/Amsterdam/amsterdam-schema#concepts
     """
     def _store_schema(self, schema: DatasetSchema):
+        """ Store schema in schema repository """
         with open(compose_dataset_path(schema.id), "w") as fh:
             fh.write(schema.json())
     
     def _load_schema(self, schema_id):
+        """ Load schema from schema repository """
         with open(compose_dataset_path(schema_id)) as fh:
             return DatasetSchema(json.load(fh))
 
