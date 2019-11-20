@@ -45,11 +45,12 @@ def test_create_dataset(created_dataset: DatasetCreated, schema_dict):
     assert created_dataset.id == schema_dict['id']
 
 
-def test_insert_row(created_dataset: DatasetCreated,
+def test_insert_row(created_dataset: DatasetCreated, schema_dict,
                     service: DatasetService, dataset_dict: list):
     for row_dict in dataset_dict:
         event = InsertRow(
             dataset_id=created_dataset.id,
             row=row_dict
         )
+        DatasetSchema(schema_dict).validate(row_dict)
         service.insert_row(event)
