@@ -24,7 +24,7 @@ from .exceptions import InvalidInputException, NotFoundException
 
 api = Blueprint("v1", __name__)
 
-routes_root_dir = environ["ROUTES_ROOT_DIR"]
+schema_repo_url = environ["SCHEMA_REPO_URL"]
 
 uri_path = environ["URI_PATH"]
 
@@ -155,9 +155,9 @@ def db_con_factory():
     return current_app.db.con
 
 
-def make_routes(path):
+def make_routes(repo_url):
 
-    catalog_context = services.CatalogContext(path, db_con_factory)
+    catalog_context = services.CatalogContext(repo_url, db_con_factory)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(
@@ -172,12 +172,12 @@ def make_routes(path):
         functools.partial(handler, catalog_service.list_resources, True),
     )
 
-    oa_context = services.OpenAPIContext(uri_path, path)
+    oa_context = services.OpenAPIContext(uri_path, repo_url)
     oa_service = services.OpenAPIService(oa_context)
     api.add_url_rule("/spec", "openapi-spec", oa_service.create_openapi_spec)
 
 
-make_routes(routes_root_dir)
+make_routes(schema_repo_url)
 
 
 @api.route("/")

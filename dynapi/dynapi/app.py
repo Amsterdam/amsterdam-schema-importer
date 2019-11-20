@@ -5,7 +5,6 @@ from flask_sacore import SACore
 
 
 dsn = environ["DATABASE_URL"]
-routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
 
 class DynAPI(Flask):

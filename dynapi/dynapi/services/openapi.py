@@ -137,7 +137,7 @@ class DataClassToOpenAPI:
 @dataclass
 class OpenAPIContext:
     uri_path: str
-    root_dir: str
+    schema_repo_url: str
 
     def compose_uri(self, catalog, collection, *optional_elements):
         return  "/".join([
@@ -152,7 +152,7 @@ class OpenAPIService:
 
     def _get_types(self) -> typing.Iterator[Type]:
         return map(
-            Type, get_datasets(self.context.root_dir)
+            Type, get_datasets(self.context.schema_repo_url)
         )
 
     def create_openapi_spec(self):
@@ -168,5 +168,5 @@ class OpenAPIService:
         for catalog in self._get_types():
             for cls in catalog.classes:
                 mutator(catalog, cls)
-            
+
         return openapi.dict()

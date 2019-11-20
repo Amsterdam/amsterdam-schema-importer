@@ -63,6 +63,7 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
       - ROUTES_ROOT_DIR=/data
+      - SCHEMA_REPO_URL=https://api.github.com/repos/jjmurre/schematest
       - URI_PATH=/api/
     command:
       # sleep infinity

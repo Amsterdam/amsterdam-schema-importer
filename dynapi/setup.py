@@ -11,6 +11,7 @@ setup(
     url="",
     packages=find_packages(),
     install_requires=[
+        "requests",
         "Flask-API",
         "Flask-SACore",
         "Flask-Cors",
