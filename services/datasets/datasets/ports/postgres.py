@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import functools
 import typing
 
 from sqlalchemy import Table, Column, create_engine, MetaData, sql
@@ -13,6 +14,13 @@ JSON_TYPE_TO_PG = {
     "string": String,
     "integer": Integer,
 }
+
+
+@functools.lru_cache(12)
+def get_engine_from_db_uri(db_uri: str):
+    """ SQLA engines should be defined once per process """
+    return create_engine(db_uri)
+
 
 @dataclass
 class DBTable:
@@ -46,7 +54,7 @@ class DBTable:
 
 class PostgresPort:
     def __init__(self, db_uri: str):
-        self.engine = create_engine(
+        self.engine = get_engine_from_db_uri(
                 db_uri
         )
         self.meta = MetaData(
