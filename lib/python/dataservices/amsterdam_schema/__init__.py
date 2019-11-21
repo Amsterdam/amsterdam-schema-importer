@@ -1,80 +1,74 @@
 from collections import UserDict
+from dataclasses import dataclass
 import json
 import typing
 
 import jsonschema
 
-class DatasetSchema(UserDict):
-    """ The schema of a dataset """
+class SchemaType(UserDict):
     @property
     def id(self):
         return self['id']
+    
+    @property
+    def type(self):
+        return self['type']
 
+    def json(self):
+        return json.dumps(self.data)
+    
+
+class DatasetType(UserDict):
+    pass
+
+
+class DatasetSchema(SchemaType):
+    """ The schema of a dataset """
     @classmethod
     def from_dict(cls, obj: dict):
         """ Parses given dict and validates the given schema """
         return cls(obj)
 
-    def json(self):
-        return json.dumps(self.data)
-    
-    def validate(self, row):
-        jsonschema.validate(row, self.data)
-
-
-class Dataset(UserDict):
-    """ The instance of a dataset """
-
-    DEFAULT_CRS = "EPSG:28992"
-
-    @classmethod
-    def from_dict(cls, obj: dict, schema: DatasetSchema):
-        """ Parses given dict and validates against the schema """
-        return cls(obj)
-    
-    @classmethod
-    def from_list(cls, objs: list, schema: DatasetSchema):
-        dataset = cls(schema)
-        dataset['classes'] = objs
-        return dataset
-    
-    def validate(self, schema: DatasetSchema):
-        jsonschema.validate(self, schema)
-
     @property
-    def name(self):
-        return self['id']
-
-    @property
-    def crs(self) -> str:
-        return self.get('crs', self.DEFAULT_CRS)
-
-    @property
-    def classes(self) -> typing.List["Dataclass"]:
+    def tables(self) -> typing.List["DatasetTableSchema"]:
         return [
-            Dataclass(i) for i in self['classes']
+            DatasetTableSchema(i) for i in self['tables']
         ]
     
-    def get_class_by_id(self, dataclass_id: str) -> "Dataclass":
-        for dclass in self.classes:
-            if dclass.id == dataclass_id:
-                return dclass
-        raise ValueError(f"Dataclass '{dataclass_id}' does not exist in {self}")
+    def get_table_by_id(self, table_id: str) -> "DatasetTableSchema":
+        for table in self.tables:
+            if table.id == table_id:
+                return table
+        raise ValueError(
+            f"Schema of table '{table_id}' does not exist in {self}"
+        )
 
 
-class Dataclass(UserDict):
-    @property
-    def id(self):
-        return self['id']
-
+class DatasetTableSchema(SchemaType):
+    """ The class within a dataset """
     @property
     def fields(self):
         return [
-            Field(i) for i in self['properties']
+            DatasetFieldSchema(name=name, **spec)
+            for name, spec in self['schema']['properties'].items()
         ]
 
+    def validate(self, row: dict):
+        jsonschema.validate(
+            row, self.data['schema']
+        )
 
-class Field(UserDict):
-    @property
-    def type(self):
-        return self['type']
+
+@dataclass
+class DatasetFieldSchema:
+    """ A field in a dataclass """
+    name: str
+    type: str
+
+
+class DatasetRow(DatasetType):
+    """ An actual instance of data """
+    
+    def validate(self, schema: DatasetSchema):
+        table = schema.get_table_by_id(self['table'])
+        table.validate(self.data)

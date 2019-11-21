@@ -1,34 +1,36 @@
 from dataclasses import dataclass
 import typing
 
-from sqlalchemy import Table, Column, create_engine, MetaData
+from sqlalchemy import Table, Column, create_engine, MetaData, sql
 from sqlalchemy import (
-    String,
+    String, Integer
 )
 
-from dataservices.amsterdam_schema import Dataclass
+from dataservices.amsterdam_schema import DatasetTableSchema
 
 
 JSON_TYPE_TO_PG = {
-    "string": String
+    "string": String,
+    "integer": Integer,
 }
 
 @dataclass
-class DatasetTable:
+class DBTable:
     name: str
     schema: str
     columns: typing.List[Column]
 
     @classmethod
-    def from_dataclass(cls, dataset_id: str, dclass: Dataclass):
+    def from_dataset_table(cls,
+                           dataset_id: str, dataset_table: DatasetTableSchema):
         columns = [
             Column(
                 field.name,
                 JSON_TYPE_TO_PG[field.type]
-            ) for field in dclass.fields
+            ) for field in dataset_table.fields
         ]
         return cls(
-            name=dclass.name,
+            name=dataset_table.id,
             schema=dataset_id,
             columns=columns
         )
@@ -51,14 +53,19 @@ class PostgresPort:
             self.engine
         )
         self.connection = self.engine.connect()
-        self.transaction = self.engine.begin()
+        self.transaction = self.connection.begin()
     
-    def create_table(self, table: DatasetTable):
-        table.pg_table.create(self.transaction)
+    def create_schema(self, schema_name: str):
+        self.connection.execute(sql.text(
+            "create schema :schema"
+        ), schema=schema_name)
+    
+    def create_table(self, table: DBTable):
+        table.pg_table.create(self.connection)
 
-    def insert_row(self, table: DatasetTable, **values):
+    def insert_row(self, table: DBTable, values):
         table.pg_table.insert(
-            **values
+            values
         )
 
     def commit(self):

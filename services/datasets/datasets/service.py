@@ -2,13 +2,13 @@ import json
 import os
 
 from dataclasses import dataclass
-from dataservices.amsterdam_schema import Dataset, DatasetSchema
+from dataservices.amsterdam_schema import DatasetSchema
 
 from .core import types
 from .ports import postgres
 
 DATASETS_PATH = os.getenv("DATASET_PATH", "./data")
-DB_URI os.getenv(
+DB_URI = os.getenv(
     'DATABASE_URI', "postgresql://postgres:postgres@database/postgres"
 )
 
@@ -36,7 +36,7 @@ class DatasetCreated(types.Event):
 class CreateRow(types.Event):
     """ Create a document row """
     dataset_id: str
-    dataclass_id: str
+    dataset_table_id: str
     row: dict
 
 
@@ -44,8 +44,8 @@ class CreateRow(types.Event):
 class RowCreated(types.Event):
     """ Fact of an inserted row """
     dataset_id: str
-    dataclass_id: str
-    row_id: str
+    dataset_table_id: str
+    row: dict
 
 
 class DatasetService:
@@ -62,10 +62,16 @@ class DatasetService:
     registry: dict
 
     def __init__(self):
+        handler_names = filter(
+            lambda s: s.startswith("handle_"), dir(self)
+        )
+        handlers = dict(
+            map(lambda n: (n, getattr(self, n)), handler_names)
+        )
         self.registry = dict(
             [
                 (f.__annotations__['event'], f) for
-                name, f in self.__dict__.items() if f.startswith("handle_")
+                name, f in handlers.items()
             ]
         )
     
@@ -94,37 +100,39 @@ class DatasetService:
     
     def handle_create_row(self, event: CreateRow):
         schema = self._load_schema(event.dataset_id)
-        schema.validate(event.row)
-        return RowInserted(
+        dclass = schema.get_table_by_id(event.dataset_table_id)
+        dclass.validate(event.row)
+        return RowCreated(
             dataset_id=schema.id,
-            dataclass_id=event.dataclass_id,
+            dataset_table_id=event.dataset_table_id,
             row=event.row
         )
     
     def handle_create_table(self, event: DatasetCreated):
         """ Creates a table when a dataset has been created """
-        schema = self._load_schema(event.schema_id)
+        schema = self._load_schema(event.id)
         db = self._db_port
-        for dclass in schema.classes:
-            table = postgres.DatasetTable.from_dataclass(
-                schema.id, dclass
+        db.create_schema(schema.id)
+        for dataset_table in schema.tables:
+            db_table = postgres.DBTable.from_dataset_table(
+                schema.id, dataset_table
             )
-            db.create_table(table)
+            db.create_table(db_table)
         db.commit()
     
     def handle_insert_row(self, event: RowCreated):
         """ Insert the row into the dataclass table in db """
-        schema = self._load_schema(event.schema_id)
+        schema = self._load_schema(event.dataset_id)
         db = self._db_port
-        dclass = schema.get_class_by_id(event.dataclass_id)
-        table = postgres.DatasetTable.from_dataclass(
-            schema.id, dclass
+        dataset_table = schema.get_table_by_id(event.dataset_table_id)
+        table = postgres.DBTable.from_dataset_table(
+            schema.id, dataset_table
         )
         db.insert_row(table, event.row)
+        db.commit()
 
     def resolve(self, event: types.Event):
         result = self.registry[event.__class__](event)
         if isinstance(result, types.Event):
             self.resolve(result)
         return result
-
