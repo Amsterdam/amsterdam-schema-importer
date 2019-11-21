@@ -91,14 +91,14 @@ class DatasetService:
             DB_URI
         )
 
-    def handle_create_dataset(self, event: CreateDataset):
+    def handle_create_dataset(self, event: CreateDataset) -> DatasetCreated:
         schema = DatasetSchema.from_dict(event.schema)
         self._store_schema(schema)
         return DatasetCreated(
             id=schema.id
         )
     
-    def handle_create_row(self, event: CreateRow):
+    def handle_create_row(self, event: CreateRow) -> RowCreated:
         schema = self._load_schema(event.dataset_id)
         dclass = schema.get_table_by_id(event.dataset_table_id)
         dclass.validate(event.row)
@@ -119,6 +119,9 @@ class DatasetService:
             )
             db.create_table(db_table)
         db.commit()
+
+    def handle_register_dcat(self, event: DatasetCreated):
+        """ Register in DCAT """
     
     def handle_insert_row(self, event: RowCreated):
         """ Insert the row into the dataclass table in db """
