@@ -9,7 +9,9 @@ def c(f):
     annos = f.__annotations__
     event_in = annos['event']
     event_out = annos.get('return')
+
     result = f"""
+    {n(f)}[shape=record;label=<<font point-size="25">{n(f)}</font><br/>{f.__doc__ or ""}>]
     {n(event_in)} -> {n(f)};
     """
     if event_out:
