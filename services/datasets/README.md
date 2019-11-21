@@ -5,4 +5,4 @@ Event driven service for handling datasets domain events.
 
 ### Graph
 
-![graph](./graph.pnh)
+![graph](/services/datasets/graph.png)
