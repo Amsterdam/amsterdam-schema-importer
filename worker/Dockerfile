@@ -1,7 +1,7 @@
 FROM amsterdam/python
 MAINTAINER datapunt@amsterdam.nl
 
-EXPOSE 8766
+EXPOSE 8080
 
 COPY ./requirements.txt /app
 WORKDIR /app

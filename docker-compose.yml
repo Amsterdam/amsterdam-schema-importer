@@ -64,17 +64,19 @@ services:
       - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
       - ROUTES_ROOT_DIR=/data
       - URI_PATH=/api/
-    command:
-      # sleep infinity
-      gunicorn dynapi.wsgi:application -w 1 -b 0.0.0.0:8080
+        #command:
+        #sleep infinity
+      #      gunicorn dynapi.wsgi:application -w 1 -b 0.0.0.0:9080
     volumes:
       - ./dynapi:/dynapi
       - ./data:/data
+    ports:
+      - "8080:8080"
 
   proxy:
     build: ./proxy
     ports:
-      - "8080:80"
+      - "9080:80"
 
 volumes:
   db_data:

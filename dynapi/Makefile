@@ -1,5 +1,3 @@
-run: export FLASK_APP=api.py
-run: export FLASK_ENV=development
+run: export URI_PATH=/
 run: 
-	bin/flask run --host 0.0.0.0 --port=5001
-
+	gunicorn dynapi.wsgi:application -w 1 -b 0.0.0.0:8080
