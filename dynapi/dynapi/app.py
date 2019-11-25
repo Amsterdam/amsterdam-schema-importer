@@ -21,5 +21,5 @@ def create_app():
     from .api import api  # NoQA
     app = DynAPI(__name__)
     CORS(app)
-    app.register_blueprint(api)
+    app.register_blueprint(api, url_prefix="/api")
     return app
