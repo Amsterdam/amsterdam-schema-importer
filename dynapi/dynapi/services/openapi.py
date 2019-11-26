@@ -136,12 +136,12 @@ class DataClassToOpenAPI:
 
 @dataclass
 class OpenAPIContext:
-    uri_path: str
+    uri_path_prefix: str
     root_dir: str
 
     def compose_uri(self, catalog, collection, *optional_elements):
         return  "/".join([
-            self.uri_path[1:],
+            self.uri_path_prefix[:-1],
             catalog, collection
             ] + list(optional_elements))
 
@@ -168,5 +168,5 @@ class OpenAPIService:
         for catalog in self._get_types():
             for cls in catalog.classes:
                 mutator(catalog, cls)
-            
+
         return openapi.dict()
