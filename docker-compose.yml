@@ -52,6 +52,8 @@ services:
     build: ./worker
     environment:
       FLASK_APP: web.py
+    ports:
+      - "7080:8080"
 
   mapserver:
     build: ./mapserver
@@ -63,7 +65,7 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
       - ROUTES_ROOT_DIR=/data
-      - URI_PATH=/api/
+      - URI_PATH_PREFIX=/api/
         #command:
         #sleep infinity
       #      gunicorn dynapi.wsgi:application -w 1 -b 0.0.0.0:9080
