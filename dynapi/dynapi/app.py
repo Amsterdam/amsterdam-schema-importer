@@ -19,7 +19,10 @@ class DynAPI(Flask):
 
 def create_app():
     from .api import api  # NoQA
+    from .status import status  # NoQA
     app = DynAPI(__name__)
     CORS(app)
-    app.register_blueprint(api)
+
+    app.register_blueprint(api, url_prefix="/api")
+    app.register_blueprint(status, url_prefix="/status")
     return app

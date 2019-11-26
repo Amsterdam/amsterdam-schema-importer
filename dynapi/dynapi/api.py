@@ -26,7 +26,7 @@ api = Blueprint("v1", __name__)
 
 routes_root_dir = environ["ROUTES_ROOT_DIR"]
 
-uri_path = environ["URI_PATH"]
+uri_path_prefix = environ["URI_PATH_PREFIX"]
 
 
 # XXX instead of explicitly stating multiple
@@ -43,7 +43,7 @@ class JSONRenderer(Renderer):
     def get_self_link(self, resource):
         document_id = getattr(resource.fields, resource.collection.primary_name)
         return (
-            f"{uri_path}{resource.collection.coll_ref.catalog}/"
+            f"{uri_path_prefix}{resource.collection.coll_ref.catalog}/"
             f"{resource.collection.coll_ref.collection}/{document_id}"
         )
 
@@ -172,7 +172,7 @@ def make_routes(path):
         functools.partial(handler, catalog_service.list_resources, True),
     )
 
-    oa_context = services.OpenAPIContext(uri_path, path)
+    oa_context = services.OpenAPIContext(uri_path_prefix, path)
     oa_service = services.OpenAPIService(oa_context)
     api.add_url_rule("/spec", "openapi-spec", oa_service.create_openapi_spec)
 
@@ -182,7 +182,7 @@ make_routes(routes_root_dir)
 
 @api.route("/")
 def index():
-    openapi_spec_path = f"{uri_path}spec"
+    openapi_spec_path = f"{uri_path_prefix}spec"
     return render_template("index.html", openapi_spec_path=openapi_spec_path)
 
 
