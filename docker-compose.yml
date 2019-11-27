@@ -51,9 +51,20 @@ services:
   worker:
     build: ./worker
     environment:
-      FLASK_APP: web.py
+      UWSGI_DIE_ON_TERM: "1"
+      UWSGI_HARAKIRI: "25"
+      UWSGI_HTTP: ":8080"
+      UWSGI_MASTER: "1"
+      UWSGI_MODULE: "dynapi.wsgi:application"
+      UWSGI_OFFLOAD_THREADS: "3"
+      UWSGI_PROCESSES: "4"
+      UWSGI_STATIC_MAP: "/static=/static"
+      UWSGI_VACUUM: "1"
     ports:
       - "7080:8080"
+        # command:
+      # sleep infinity
+      # uwsgi -w worker.web:app
 
   mapserver:
     build: ./mapserver
