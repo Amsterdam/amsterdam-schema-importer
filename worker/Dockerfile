@@ -3,11 +3,9 @@ MAINTAINER datapunt@amsterdam.nl
 
 EXPOSE 8080
 
-COPY ./requirements.txt /app
 WORKDIR /app
-
-RUN pip install -r requirements.txt
-
 COPY . /app
+RUN pip install -e .
+
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["make", "run"]
