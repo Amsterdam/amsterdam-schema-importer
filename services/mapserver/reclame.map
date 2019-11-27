@@ -1,0 +1,20 @@
+MAP
+    NAME "reclame"
+    LAYER
+        NAME "reclame"
+        TYPE POLYGON
+        CONNECTION "user=postgres password= dbname=postgres host=postgres"
+        CONNECTIONTYPE POSTGIS
+        DATA "geometry from reclame.reclame USING srid=28992 USING UNIQUE id"
+        CLASS
+            STYLE
+                COLOR 200 50 50
+                ANTIALIAS TRUE
+            END
+        END
+        METADATA
+            "ows_enable_request" "*"
+        END
+    END
+    INCLUDE "header.inc"
+END

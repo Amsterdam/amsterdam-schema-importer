@@ -40,41 +40,51 @@ node {
         }
     }
 
-    stage("Build DS Mapserver image") {
+    stage("Build Backend image") {
         tryStep "build", {
             docker.withRegistry('https://repo.data.amsterdam.nl','docker-registry') {
-                def image = docker.build("datapunt/dataservices/mapserver:${env.BUILD_NUMBER}", "./mapserver")
+                def image = docker.build("datapunt/dataservices/backend:${env.BUILD_NUMBER}", "./mapserver")
                 image.push()
             }
         }
     }
 
-    stage('Push DS Mapserver acceptance image') {
+    stage('Push Backend acceptance image') {
         tryStep "image tagging", {
             docker.withRegistry('https://repo.data.amsterdam.nl','docker-registry') {
-                def image = docker.image("datapunt/dataservices/mapserver:${env.BUILD_NUMBER}")
+                def image = docker.image("datapunt/dataservices/backend:${env.BUILD_NUMBER}")
                 image.pull()
                 image.push("acceptance")
             }
         }
     }
 
-    stage("Build Dynamic API image") {
+    stage("Build API image") {
         tryStep "build", {
             docker.withRegistry('https://repo.data.amsterdam.nl','docker-registry') {
-                def image = docker.build("datapunt/dataservices/dynapi:${env.BUILD_NUMBER}", "./dynapi")
+                def image = docker.build("datapunt/dataservices/api:${env.BUILD_NUMBER}", "./dynapi")
                 image.push()
             }
         }
     }
 
-    stage('Push Dynamic API acceptance image') {
+    stage('Push API acceptance image') {
         tryStep "image tagging", {
             docker.withRegistry('https://repo.data.amsterdam.nl','docker-registry') {
-                def image = docker.image("datapunt/dataservices/dynapi:${env.BUILD_NUMBER}")
+                def image = docker.image("datapunt/dataservices/api:${env.BUILD_NUMBER}")
                 image.pull()
                 image.push("acceptance")
             }
+        }
+    }
+
+    stage("Deploy to ACC") {
+        tryStep "deployment", {
+            build job: 'Subtask_Openstack_Playbook',
+                parameters: [
+                    [$class: 'StringParameterValue', name: 'INVENTORY', value: 'acceptance'],
+                    [$class: 'StringParameterValue', name: 'PLAYBOOK', value: 'deploy-dataservices.yml'],
+                ]
         }
     }
 

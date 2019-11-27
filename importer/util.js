@@ -3,7 +3,6 @@ const path = require('path')
 const H = require('highland')
 const axios = require('axios')
 
-const toSnakeCase = (property) => property.replace(/\.?([A-Z]+)/g, '_$1').toLowerCase().replace(/^_/, '')
 
 const importData = async (datasetName, compiledSchema, objectStream, db) => {
   const classes = compiledSchema.classes
@@ -150,7 +149,7 @@ const grantStatements = (completeSchema) => {
               to = 'PUBLIC'
             }
 
-            return `GRANT SELECT(${toSnakeCase(property)}) ON ${completeSchema.id}.${cls.id} TO ${to};`
+            return `GRANT SELECT("${property}") ON ${completeSchema.id}.${cls.id} TO ${to};`
           }
         })
     }).flat()
@@ -207,13 +206,12 @@ const makeColumn = ([key, value]) => {
     throw new Error(`Can't Postgressify ${JSON.stringify(value)}`)
   }
 
-  return `${toSnakeCase(key)} ${pgType}`
+  return `"${key}" ${pgType}`
 }
 
 module.exports = {
   compileSchema,
   createTable,
   grantStatements,
-  toSnakeCase,
   importData
 }

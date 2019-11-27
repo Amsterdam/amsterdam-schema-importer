@@ -5,3 +5,8 @@ data/*
 *-workspace
 mapserver/*.map
 .arch
+node_modules
+bin
+lib64
+share
+.venv

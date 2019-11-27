@@ -1,5 +1,0 @@
-flask
-jsonref==0.2
-mappyfile
-dataservices>=0.0.3
-
