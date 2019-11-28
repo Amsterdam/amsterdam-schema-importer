@@ -9,14 +9,14 @@ class SchemaType(UserDict):
     @property
     def id(self):
         return self['id']
-    
+
     @property
     def type(self):
         return self['type']
 
     def json(self):
         return json.dumps(self.data)
-    
+
 
 class DatasetType(UserDict):
     pass
@@ -27,6 +27,7 @@ class DatasetSchema(SchemaType):
     @classmethod
     def from_dict(cls, obj: dict):
         """ Parses given dict and validates the given schema """
+        # XXX validation not added yet
         return cls(obj)
 
     @property
@@ -34,7 +35,7 @@ class DatasetSchema(SchemaType):
         return [
             DatasetTableSchema(i) for i in self['tables']
         ]
-    
+
     def get_table_by_id(self, table_id: str) -> "DatasetTableSchema":
         for table in self.tables:
             if table.id == table_id:
@@ -45,7 +46,7 @@ class DatasetSchema(SchemaType):
 
 
 class DatasetTableSchema(SchemaType):
-    """ The class within a dataset """
+    """ The table within a dataset """
     @property
     def fields(self):
         return [
@@ -68,7 +69,7 @@ class DatasetFieldSchema:
 
 class DatasetRow(DatasetType):
     """ An actual instance of data """
-    
+
     def validate(self, schema: DatasetSchema):
         table = schema.get_table_by_id(self['table'])
         table.validate(self.data)
