@@ -2,6 +2,7 @@ import os
 import json
 from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
+import jsonschema
 from dataservices.amsterdam_schema import DatasetSchema
 from schema_db import DBTable
 
@@ -39,12 +40,19 @@ def fetch_row_insert_stmts(schema, dataset_table, data):
 def create_table(schema, engine):
     dataset_name = schema["id"]
     with engine.begin() as connection:
-        connection.execute(f"DROP SCHEMA IF EXISTS {dataset_name} CASCADE; CREATE SCHEMA {dataset_name}")
+        connection.execute(
+            f"DROP SCHEMA IF EXISTS {dataset_name} CASCADE; CREATE SCHEMA {dataset_name}"
+        )
         connection.execute(fetch_table_create_stmts(schema))
 
 
 def create_rows(schema, dataset_table, data, engine):
     db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+    # XXX Validation crashes on null values
+    for row in data:
+        try:
+            dataset_table.validate(row)
+        except jsonschema.exceptions.ValidationError as e:
+            print(f"error: {e.message} for {row}")
     with engine.begin() as connection:
         connection.execute(db_table.pg_table.insert().values(), data)
-
