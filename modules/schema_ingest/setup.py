@@ -12,6 +12,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "SQLAlchemy",
+        "click",
         "dataservices>=0.0.3"
     ],
     extras_require={"tests": ["pytest"]},
