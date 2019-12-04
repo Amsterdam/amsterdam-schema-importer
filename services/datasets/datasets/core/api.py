@@ -40,7 +40,7 @@ class API:
         self.backend = backend_cls(name)
         self.context_cls = context_cls
         self.request_cls = request_cls
-    
+
     def route(self, path, methods: typing.List[str]):
         def wrapper(func: typing.Callable):
             request_cls = func.__annotations__['request']
