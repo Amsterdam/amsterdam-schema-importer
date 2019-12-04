@@ -1,48 +1,50 @@
 import os
 import json
-import click
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
 from dataservices.amsterdam_schema import DatasetSchema
-from schema_db import Postgres, DBTable
+from schema_db import DBTable
 
 
 # DB_URI = os.getenv("DATABASE_URI", "postgresql://postgres:postgres@database/postgres")
-DB_URI = os.getenv("DATABASE_URI", "postgresql://postgres:postgres@localhost:5435/postgres")
+DB_URI = os.getenv(
+    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5435/postgres"
+)
 
 
 metadata = MetaData()
 
 
-def schema_from_path(path):
-    with open(path) as fh:
+def schema_def_from_path(schema_path):
+    with open(schema_path) as fh:
         return json.load(fh)
 
 
-def load_schema(schema):
-    return DatasetSchema(schema)
+def fetch_schema(schema_def):
+    return DatasetSchema(schema_def)
+
 
 def fetch_table_create_stmts(schema):
-    pass
-
-def create_table(schema):
-    fetch_table_create_stmts(schema)
-
-
-@click.command()
-@click.argument("schema_path")
-def main(schema_path):
-    # path = "/home/jan/projects/amsterdam/amsterdam-schema-importer/data/bommen/bommen.dataset.schema.json"
-    # engine = create_engine(DB_URI)
-    schema = load_schema(schema_from_path(schema_path))
-    # Create DDL
-    # Need a Meta and an engine, maybe abstract ayway
-    # db = Postgres(engine)
     for dataset_table in schema.tables:
-        db_table = DBTable.from_dataset_table(
-            metadata, schema.id, dataset_table
-        )
-    # print(db.fetch_table_dll(db_table))
-    table = db_table.pg_table
-    print(CreateTable(table))
-    print(table.insert())
+        db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+    return str(CreateTable(db_table.pg_table))
+
+
+def fetch_row_insert_stmts(schema, dataset_table, data):
+    db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+    # XXX
+    return str(db_table.pg_table.insert().compile())
+
+
+def create_table(schema, engine):
+    dataset_name = schema["id"]
+    with engine.begin() as connection:
+        connection.execute(f"DROP SCHEMA IF EXISTS {dataset_name} CASCADE; CREATE SCHEMA {dataset_name}")
+        connection.execute(fetch_table_create_stmts(schema))
+
+
+def create_rows(schema, dataset_table, data, engine):
+    db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+    with engine.begin() as connection:
+        connection.execute(db_table.pg_table.insert().values(), data)
+
