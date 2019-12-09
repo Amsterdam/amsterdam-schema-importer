@@ -35,7 +35,8 @@ def table(schema_path, dry_run):
     schema = fetch_schema(schema_def_from_path(schema_path))
     if not dry_run:
         engine = create_engine(DB_URI)
-        create_table(schema, engine)
+        with engine.begin() as connection:
+            create_table(schema, connection)
     else:
         print(fetch_table_create_stmts(schema))
 
@@ -45,6 +46,7 @@ def fetch_rows(ndjson_path):
         for row in data:
             row["geometry"] = shape(row["geometry"]).wkt
             yield row
+
 
 @ingest.command()
 @click.argument("dataset_table_name")
@@ -58,6 +60,7 @@ def records(dataset_table_name, schema_path, ndjson_path, dry_run):
     data = list(fetch_rows(ndjson_path))
     if not dry_run:
         engine = create_engine(DB_URI)
-        create_rows(schema, dataset_table, data, engine)
+        with engine.begin() as connection:
+            create_rows(schema, dataset_table, data, connection)
     else:
         print(fetch_row_insert_stmts(schema, dataset_table, data))

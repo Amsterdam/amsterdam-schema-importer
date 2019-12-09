@@ -37,22 +37,22 @@ def fetch_row_insert_stmts(schema, dataset_table, data):
     return str(db_table.pg_table.insert().compile())
 
 
-def create_table(schema, engine):
+def create_table(schema, connection):
     dataset_name = schema["id"]
-    with engine.begin() as connection:
-        connection.execute(
-            f"DROP SCHEMA IF EXISTS {dataset_name} CASCADE; CREATE SCHEMA {dataset_name}"
-        )
-        connection.execute(fetch_table_create_stmts(schema))
+    connection.execute(
+        f"DROP SCHEMA IF EXISTS {dataset_name} CASCADE; CREATE SCHEMA {dataset_name}"
+    )
+    connection.execute(fetch_table_create_stmts(schema))
 
 
-def create_rows(schema, dataset_table, data, engine):
+def create_rows(schema, dataset_table, data, connection):
     db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
     # XXX Validation crashes on null values
-    for row in data:
-        try:
-            dataset_table.validate(row)
-        except jsonschema.exceptions.ValidationError as e:
-            print(f"error: {e.message} for {row}")
-    with engine.begin() as connection:
-        connection.execute(db_table.pg_table.insert().values(), data)
+    # Extend to ["string", nulll] types
+    if False:
+        for row in data:
+            try:
+                dataset_table.validate(row)
+            except jsonschema.exceptions.ValidationError as e:
+                print(f"error: {e.message} for {row}")
+    connection.execute(db_table.pg_table.insert().values(), data)
