@@ -11,9 +11,13 @@ setup(
     url="",
     packages=find_packages(),
     install_requires=[
+        "requests",
         "SQLAlchemy",
-        "dataservices>=0.0.3"
+        "jsonschema",
+        "dataservices>=0.0.3",
         "ndjson",
+        "shapely",
+        "schema_db",
     ],
     extras_require={"tests": ["pytest"]},
 )

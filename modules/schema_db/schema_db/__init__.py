@@ -18,7 +18,7 @@ JSON_TYPE_TO_PG = {
     "https://static.amsterdam.nl/schemas/schema@v1.0#/definitions/id": String,
     "https://static.amsterdam.nl/schemas/schema@v1.0#/definitions/class": String,
     "https://static.amsterdam.nl/schemas/schema@v1.0#/definitions/dataset": String,
-    "https://geojson.org/schema/Geometry.json": Geometry(geometry_type='GEOMETRY'),
+    "https://geojson.org/schema/Geometry.json": Geometry(geometry_type="GEOMETRY"),
 }
 
 
@@ -43,7 +43,14 @@ class DBTable:
 
     @property
     def pg_table(self) -> Table:
-        return Table(self.name, self.metadata, schema=self.schema, *self.columns)
+        # XXX maybe always pre-create the pg table on init
+        table_key = f"{self.schema}.{self.name}"
+        table = self.metadata.tables.get(table_key)
+        return (
+            table
+            if table is not None
+            else Table(self.name, self.metadata, schema=self.schema, *self.columns)
+        )
 
 
 @functools.lru_cache(12)

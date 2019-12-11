@@ -1,8 +1,11 @@
 import os
 import json
+import requests
 from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
 import jsonschema
+import ndjson
+from shapely.geometry import shape
 from dataservices.amsterdam_schema import DatasetSchema
 from schema_db import DBTable
 
@@ -13,12 +16,38 @@ DB_URI = os.getenv(
 )
 
 
+# XXX This is the regular approach, a 'global' metadata
+# But somewhat problematic with the re-creation of DBTable on every request
 metadata = MetaData()
 
 
 def schema_def_from_path(schema_path):
     with open(schema_path) as fh:
         return json.load(fh)
+
+
+def fetch_rows(fh):
+    data = ndjson.load(fh)
+    for row in data:
+        row["geometry"] = shape(row["geometry"]).wkt
+        yield row
+
+
+def schema_def_from_url(schemas_url, dataset_name, table_name):
+    response = requests.get(schemas_url)
+    response.raise_for_status()
+    for schema_dir_info in response.json():
+        cur_ds_name = schema_dir_info["name"]
+        if dataset_name == cur_ds_name:
+            response = requests.get(f"{schemas_url}{cur_ds_name}/")
+            response.raise_for_status()
+            for schema_file_info in response.json():
+                cur_table_name = schema_file_info["name"]
+                if table_name == cur_table_name:
+                    response = requests.get(f"{schemas_url}{cur_ds_name}/{cur_table_name}")
+                    response.raise_for_status()
+                    return response.json()
+            break
 
 
 def fetch_schema(schema_def):
