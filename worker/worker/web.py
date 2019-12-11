@@ -21,7 +21,7 @@ DB_DSN = os.getenv(
 )
 
 # XXX change SCHEMA_REPO_URL -> SCHEMA_URL in Openstack
-SCHEMA_URL = os.getenv("SCHEMA_REPO_URL", "https://schemas.data.amsterdam.nl/datasets/")
+SCHEMA_URL = os.getenv("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/")
 
 # Change this to use aproach as in dynapi
 engine = create_engine(DB_DSN)
