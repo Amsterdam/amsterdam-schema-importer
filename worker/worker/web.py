@@ -17,10 +17,11 @@ from . import app as executors
 app = Flask(__name__)
 
 DB_DSN = os.getenv(
-    "DATABASE_DSN", "postgresql://postgres:postgres@postgres:5432/postgres"
+    "DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/postgres"
 )
 
-SCHEMA_URL = os.getenv("SCHEMA_URL", "https://schemas.data.amsterdam.nl/datasets/")
+# XXX change SCHEMA_REPO_URL -> SCHEMA_URL in Openstack
+SCHEMA_URL = os.getenv("SCHEMA_REPO_URL", "https://schemas.data.amsterdam.nl/datasets/")
 
 # Change this to use aproach as in dynapi
 engine = create_engine(DB_DSN)

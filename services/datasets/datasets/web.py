@@ -22,4 +22,4 @@ api = API("import", context_cls=DatasetRequestContext)
 @api.route("/datasets", methods=['POST'])
 def create_import(context, request: CreateDatasetRequest):
     """ Create a new dataset from given JSON """
-    return context.service.create_dataset(request.obj)
+    return context.service.handle_create_dataset(request.obj)

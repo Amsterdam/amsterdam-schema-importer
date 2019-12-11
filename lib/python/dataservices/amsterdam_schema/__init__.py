@@ -31,6 +31,7 @@ class DatasetSchema(SchemaType):
     @classmethod
     def from_dict(cls, obj: dict):
         """ Parses given dict and validates the given schema """
+        # XXX validation not added yet
         return cls(obj)
 
     @property
