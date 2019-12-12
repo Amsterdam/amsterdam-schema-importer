@@ -1,4 +1,4 @@
 export FLASK_APP=worker/web.py 
 export FLASK_ENV=development 
-flask run -p 5002
+flask run -p 5002 --host=0.0.0.0
 # python -m pdb -m flask run -p 5002

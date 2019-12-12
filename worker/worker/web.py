@@ -14,14 +14,19 @@ from schema_ingest import (
     fetch_rows,
 )
 
+# from sentry_sdk.integrations.wsgi import SentryWsgiMiddleware
+
+
 from . import app as executors
 
-sentry_sdk.init(
-    dsn="https://fbf7a25c487840e1b2757fc535a6b703@sentry.data.amsterdam.nl/3",
-    integrations=[FlaskIntegration()],
-)
 
+SENTRY_DSN = os.getenv("SENTRY_DSN", "https://fbf7a25c487840e1b2757fc535a6b703@sentry.data.amsterdam.nl/3")
+if SENTRY_DSN is not None:
+    sentry_sdk.init(dsn=SENTRY_DSN, integrations=[FlaskIntegration()])
+
+# sentry_sdk.init(dsn=SENTRY_DSN)
 app = Flask(__name__)
+# app = SentryWsgiMiddleware(app)
 
 DB_DSN = os.getenv(
     "DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/postgres"
@@ -63,4 +68,4 @@ def add_rows(dataset, table):
 
 @app.route("/err")
 def trigger_error():
-    division_by_zero = 1 / 0
+    raise Exception("test error endpoint")

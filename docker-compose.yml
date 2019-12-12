@@ -65,7 +65,8 @@ services:
       UWSGI_VACUUM: "1"
     ports:
       - "7080:8080"
-        # command:
+        #    command:
+        # bash run.sh
       # sleep infinity
       # uwsgi -w worker.web:app
 
