@@ -14,7 +14,8 @@ setup(
         "Flask",
         "jsonref==0.2",
         "mappyfile",
-        "dataservices>=0.0.3"
+        "dataservices>=0.0.3",
+        "sentry-sdk[flask]",
     ],
     extras_require={"tests": ["pytest"]},
 )
