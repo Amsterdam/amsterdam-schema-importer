@@ -2,7 +2,6 @@
 Service for generating an OpenAPI spec
 """
 from dataclasses import dataclass, field, asdict
-from collections import defaultdict
 import typing
 
 from dynapi.lib import get_datasets
@@ -17,15 +16,16 @@ class Parameter:
     required: bool = False
 
 
-
 @dataclass
 class MediaType:
     schema: dict
+
 
 @dataclass
 class Response:
     description: str
     content: typing.Dict[str, dict]
+
 
 @dataclass
 class Operation:
@@ -45,27 +45,21 @@ class PathItem:
 
 @dataclass
 class Info:
-    version: str = '0.0.1'
+    version: str = "0.0.1"
     title: str = "Some title"
 
 
 @dataclass
 class Components:
-    schemas: typing.Dict[str, dict] = field(
-        default_factory=dict
-    )
+    schemas: typing.Dict[str, dict] = field(default_factory=dict)
 
 
 @dataclass
 class OpenAPI:
     info: Info
-    openapi: str = '3.0.0'
-    components: Components = field(
-        default_factory=Components
-    )
-    paths: typing.Dict[str, PathItem] = field(
-        default_factory=dict
-    )
+    openapi: str = "3.0.0"
+    components: Components = field(default_factory=Components)
+    paths: typing.Dict[str, PathItem] = field(default_factory=dict)
 
     def add_path_item(self, path: str, path_item: PathItem):
         self.paths[path] = path_item
@@ -73,12 +67,9 @@ class OpenAPI:
     def dict(self):
         def _factory(inst):
             # remove trailing underscores
-            return dict(
-                (k.rstrip('_'), v) for k, v in inst if v
-            )
-        return asdict(
-            self, dict_factory=_factory
-        )
+            return dict((k.rstrip("_"), v) for k, v in inst if v)
+
+        return asdict(self, dict_factory=_factory)
 
 
 @dataclass
@@ -95,11 +86,9 @@ class DataClassToOpenAPI:
         primary_name_description = datacls["schema"]["properties"][primary_name][
             "description"
         ]
-        self.openapi.components.schemas[cls_name] = datacls['schema']
+        self.openapi.components.schemas[cls_name] = datacls["schema"]
         self.openapi.add_path_item(
-            self.compose_uri(
-                catalog.name, cls_name, f"{{{primary_name}}}"
-            ),
+            self.compose_uri(catalog.id, cls_name, f"{{{primary_name}}}"),
             PathItem(
                 get=Operation(
                     operationId=f("get", cls_name),
@@ -107,14 +96,14 @@ class DataClassToOpenAPI:
                         200: Response(
                             description=datacls["id"],
                             content={
-                                'application/json': {
+                                "application/json": {
                                     "schema": {
                                         "$ref": f"#/components/schemas/{cls_name}"
                                     }
                                 }
-                            }
+                            },
                         )
-                    }
+                    },
                 ),
                 parameters=[
                     Parameter(
@@ -128,9 +117,9 @@ class DataClassToOpenAPI:
                         in_="query",
                         required=False,
                         description="Format of the response",
-                    )
-                ]
-            )
+                    ),
+                ],
+            ),
         )
 
 
@@ -140,10 +129,9 @@ class OpenAPIContext:
     root_dir: str
 
     def compose_uri(self, catalog, collection, *optional_elements):
-        return  "/".join([
-            self.uri_path_prefix[:-1],
-            catalog, collection
-            ] + list(optional_elements))
+        return "/".join(
+            [self.uri_path_prefix[:-1], catalog, collection] + list(optional_elements)
+        )
 
 
 @dataclass
@@ -151,22 +139,13 @@ class OpenAPIService:
     context: OpenAPIContext
 
     def _get_types(self) -> typing.Iterator[Type]:
-        return map(
-            Type, get_datasets(self.context.root_dir)
-        )
+        return map(Type, get_datasets(self.context.root_dir))
 
     def create_openapi_spec(self):
-        openapi = OpenAPI(
-            info=Info(
-                title="OpenAPI Amsterdam Schema",
-                version="0.0.1",
-            )
-        )
-        mutator = DataClassToOpenAPI(
-            openapi, self.context.compose_uri
-        )
+        openapi = OpenAPI(info=Info(title="OpenAPI Amsterdam Schema", version="0.0.1"))
+        mutator = DataClassToOpenAPI(openapi, self.context.compose_uri)
         for catalog in self._get_types():
-            for cls in catalog.classes:
+            for cls in catalog.tables:
                 mutator(catalog, cls)
 
         return openapi.dict()

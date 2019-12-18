@@ -13,7 +13,7 @@ from schema_ingest import (
 )
 
 DB_URI = os.getenv(
-    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5435/postgres"
+    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5434/postgres"
 )
 
 
@@ -48,9 +48,10 @@ def table(schema_path, dry_run):
 def records(dataset_table_name, schema_path, ndjson_path, dry_run):
     # Add batching for rows.
     schema = fetch_schema(schema_def_from_path(schema_path))
+    srid = schema["crs"].split(":")[-1]
     dataset_table = schema.get_table_by_id(dataset_table_name)
     with open(ndjson_path) as fh:
-        data = list(fetch_rows(fh))
+        data = list(fetch_rows(fh, srid))
     if not dry_run:
         engine = create_engine(DB_URI)
         with engine.begin() as connection:

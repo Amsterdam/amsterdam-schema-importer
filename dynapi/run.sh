@@ -3,5 +3,5 @@ export FLASK_ENV=development
 export ROUTES_ROOT_DIR=./data 
 export URI_PATH_PREFIX=/api/
 export DATABASE_URL=postgres://postgres:@localhost:5434/postgres
-bin/flask run -p 5001
+flask run -p 5001
 # bin/python dynapi/wsgi.py

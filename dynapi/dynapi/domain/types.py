@@ -6,43 +6,30 @@ from dataclasses import InitVar
 
 from typing import List, Any
 
-from dynapi.lib import get_datasets
+from schema_ingest import schema_def_from_url
 
 
-class Type(aschema.Dataset):
-    ID_REF = "https://ams-schema.glitch.me/schema@v0.1#/definitions/id"
+class Type(aschema.DatasetSchema):
+    ID_REF = "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/id"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.primary_names = {cls["id"]: self.primary_name(cls) for cls in self.classes}
+        self.primary_names = {table["id"]: self.primary_name(table) for table in self.tables}
 
-    def primary_name(self, cls):
+    def primary_name(self, table):
         id_fields = [
             k
-            for k, v in cls["schema"]["properties"].items()
+            for k, v in table["schema"]["properties"].items()
             if "$ref" in v and v["$ref"] == self.ID_REF
         ]
         return id_fields and id_fields[0] or None
 
     @classmethod
     def fetch_class_info(cls, root_dir: str, catalog: str, collection: str):
-        current_type = current_cls = None
-
-        properties = []
-        types = (cls(schema) for schema in get_datasets(root_dir))
-        for t in types:
-            if t.name == catalog:
-                current_type = t
-                for tcls in t.classes:
-                    if tcls["id"] == collection:
-                        current_cls = tcls
-                        # XXX excluding class/datasets should not be hardcoded
-                        properties = [
-                            k
-                            for k in tcls["schema"]["properties"].keys()
-                            if k not in set(["class", "dataset"])
-                        ]
-        primary_name = current_type.primary_name(current_cls)
+        schema = schema_def_from_url("https://schemas.data.amsterdam.nl/datasets/", catalog, collection)
+        type_ = cls(schema)
+        primary_name = type_.primary_names[collection]
+        properties = [k for k in type_.get_table_by_id(collection)["schema"]["properties"].keys()]
         return primary_name, properties
 
 

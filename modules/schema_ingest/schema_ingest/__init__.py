@@ -5,6 +5,7 @@ from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
 import jsonschema
 import ndjson
+# from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
 from dataservices.amsterdam_schema import DatasetSchema
 from schema_db import DBTable
@@ -26,10 +27,10 @@ def schema_def_from_path(schema_path):
         return json.load(fh)
 
 
-def fetch_rows(fh):
+def fetch_rows(fh, srid):
     data = ndjson.load(fh)
     for row in data:
-        row["geometry"] = shape(row["geometry"]).wkt
+        row["geometry"] = f"SRID={srid};{shape(row['geometry']).wkt}"
         yield row
 
 
@@ -56,12 +57,12 @@ def fetch_schema(schema_def):
 
 def fetch_table_create_stmts(schema):
     for dataset_table in schema.tables:
-        db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+        db_table = DBTable.from_dataset_table(metadata, schema, dataset_table)
     return str(CreateTable(db_table.pg_table))
 
 
 def fetch_row_insert_stmts(schema, dataset_table, data):
-    db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+    db_table = DBTable.from_dataset_table(metadata, schema, dataset_table)
     # XXX
     return str(db_table.pg_table.insert().compile())
 
@@ -75,7 +76,7 @@ def create_table(schema, connection):
 
 
 def create_rows(schema, dataset_table, data, connection):
-    db_table = DBTable.from_dataset_table(metadata, schema.id, dataset_table)
+    db_table = DBTable.from_dataset_table(metadata, schema, dataset_table)
     # XXX Validation crashes on null values
     # Extend to ["string", nulll] types
     if False:

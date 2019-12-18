@@ -57,10 +57,11 @@ def create_dataset():
 def add_rows(dataset, table):
     schema_def = schema_def_from_url(SCHEMA_URL, dataset, table)
     schema = fetch_schema(schema_def)
+    srid = schema["crs"].split(":")[-1]
     dataset_table = schema.get_table_by_id(table)
     # Naive non-streaming for now
     buf = io.StringIO(request.data.decode("utf-8"))
-    data = list(fetch_rows(buf))
+    data = list(fetch_rows(buf, srid))
     with engine.begin() as connection:
         create_rows(schema, dataset_table, data, connection)
     return "", http.client.NO_CONTENT

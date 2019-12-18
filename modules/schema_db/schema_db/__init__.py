@@ -8,17 +8,18 @@ from geoalchemy2 import Geometry
 from sqlalchemy.schema import CreateTable
 
 
-from dataservices.amsterdam_schema import DatasetTableSchema
+from dataservices.amsterdam_schema import DatasetSchema, DatasetTableSchema
 
+# XXX make the srid configurable, is contained in aschema
 
 JSON_TYPE_TO_PG = {
     "string": String,
     "integer": Integer,
     "number": Float,
-    "https://static.amsterdam.nl/schemas/schema@v1.0#/definitions/id": String,
-    "https://static.amsterdam.nl/schemas/schema@v1.0#/definitions/class": String,
-    "https://static.amsterdam.nl/schemas/schema@v1.0#/definitions/dataset": String,
-    "https://geojson.org/schema/Geometry.json": Geometry(geometry_type="GEOMETRY"),
+    "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/id": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/class": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/dataset": String,
+    "https://geojson.org/schema/Geometry.json": Geometry(geometry_type="GEOMETRY", srid=28992),
 }
 
 
@@ -26,30 +27,30 @@ JSON_TYPE_TO_PG = {
 class DBTable:
     metadata: MetaData
     name: str
-    schema: str
+    dataset: DatasetSchema
     columns: typing.List[Column]
 
     @classmethod
     def from_dataset_table(
-        cls, metadata, dataset_id: str, dataset_table: DatasetTableSchema
+        cls, metadata, dataset: DatasetSchema, dataset_table: DatasetTableSchema
     ):
         columns = [
             Column(field.name, JSON_TYPE_TO_PG[field.type])
             for field in dataset_table.fields
         ]
         return cls(
-            metadata=metadata, name=dataset_table.id, schema=dataset_id, columns=columns
+            metadata=metadata, name=dataset_table.id, dataset=dataset, columns=columns
         )
 
     @property
     def pg_table(self) -> Table:
         # XXX maybe always pre-create the pg table on init
-        table_key = f"{self.schema}.{self.name}"
+        table_key = f"{self.dataset.id}.{self.name}"
         table = self.metadata.tables.get(table_key)
         return (
             table
             if table is not None
-            else Table(self.name, self.metadata, schema=self.schema, *self.columns)
+            else Table(self.name, self.metadata, schema=self.dataset.id, *self.columns)
         )
 
 
