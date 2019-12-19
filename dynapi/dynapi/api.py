@@ -186,11 +186,5 @@ def index():
     return render_template("index.html", openapi_spec_path=openapi_spec_path)
 
 
-@api.route("/recreate-routes")
-def recreate_routes():
-
-    return jsonify({"result": "ok"})
-
-
 if __name__ == "__main__":
     pass

@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from collections import defaultdict
 from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
 import jsonschema
@@ -34,21 +35,24 @@ def fetch_rows(fh, srid):
         yield row
 
 
-def schema_def_from_url(schemas_url, dataset_name, table_name):
+def schema_defs_from_url(schemas_url):
+    schema_lookup = defaultdict(dict)
     response = requests.get(schemas_url)
     response.raise_for_status()
     for schema_dir_info in response.json():
         cur_ds_name = schema_dir_info["name"]
-        if dataset_name == cur_ds_name:
-            response = requests.get(f"{schemas_url}{cur_ds_name}/")
+        response = requests.get(f"{schemas_url}{cur_ds_name}/")
+        response.raise_for_status()
+        for schema_file_info in response.json():
+            cur_table_name = schema_file_info["name"]
+            response = requests.get(f"{schemas_url}{cur_ds_name}/{cur_table_name}")
             response.raise_for_status()
-            for schema_file_info in response.json():
-                cur_table_name = schema_file_info["name"]
-                if table_name == cur_table_name:
-                    response = requests.get(f"{schemas_url}{cur_ds_name}/{cur_table_name}")
-                    response.raise_for_status()
-                    return response.json()
-            break
+            schema_lookup[cur_ds_name][cur_table_name] = response.json()
+    return schema_lookup
+
+
+def schema_def_from_url(schemas_url, dataset_name, table_name):
+    return schema_defs_from_url(schemas_url)[dataset_name][table_name]
 
 
 def fetch_schema(schema_def):

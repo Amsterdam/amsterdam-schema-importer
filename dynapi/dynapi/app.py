@@ -1,11 +1,17 @@
-from os import environ
+import os
 from flask import Flask
 from flask_cors import CORS
 from flask_sacore import SACore
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 
-dsn = environ["DATABASE_URL"]
-routes_root_dir = environ["ROUTES_ROOT_DIR"]
+dsn = os.getenv("DATABASE_URL")
+routes_root_dir = os.getenv("ROUTES_ROOT_DIR")
+
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN is not None:
+    sentry_sdk.init(dsn=SENTRY_DSN, integrations=[FlaskIntegration()])
 
 
 class DynAPI(Flask):

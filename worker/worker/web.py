@@ -14,8 +14,6 @@ from schema_ingest import (
     fetch_rows,
 )
 
-# from sentry_sdk.integrations.wsgi import SentryWsgiMiddleware
-
 
 from . import app as executors
 

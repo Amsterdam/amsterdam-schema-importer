@@ -16,6 +16,7 @@ setup(
         "Flask-Cors",
         "psycopg2-binary",
         "SQLAlchemy",
+        "sentry-sdk[flask]",
         "pint",
     ],
     extras_require={"tests": ["pytest"]},
