@@ -79,6 +79,15 @@ def create_table(schema, connection):
     connection.execute(fetch_table_create_stmts(schema))
 
 
+# XXX could be made more fine-grained, GRANTS at col level SELECT(colname)
+# TO <identity-mentioned-in-amsterdam-schema>, see Bert util.js grantStatements()
+
+def set_grants(schema, connection):
+    connection.execute(f"GRANT USAGE ON SCHEMA {schema.id} TO PUBLIC")
+    for table in schema.tables:
+        connection.execute(f"GRANT SELECT ON {schema.id}.{table.id} TO PUBLIC")
+
+
 def create_rows(schema, dataset_table, data, connection):
     db_table = DBTable.from_dataset_table(metadata, schema, dataset_table)
     # XXX Validation crashes on null values

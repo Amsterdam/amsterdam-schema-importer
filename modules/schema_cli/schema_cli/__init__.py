@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 
 from schema_ingest import (
     create_table,
+    set_grants,
     create_rows,
     fetch_table_create_stmts,
     fetch_row_insert_stmts,
@@ -36,6 +37,7 @@ def table(schema_path, dry_run):
         engine = create_engine(DB_URI)
         with engine.begin() as connection:
             create_table(schema, connection)
+            set_grants(schema, connection)
     else:
         print(fetch_table_create_stmts(schema))
 
