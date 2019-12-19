@@ -182,7 +182,7 @@ make_routes(routes_root_dir)
 
 @api.route("/")
 def index():
-    openapi_spec_path = f"{uri_path_prefix}spec"
+    openapi_spec_path = f"./spec"
     return render_template("index.html", openapi_spec_path=openapi_spec_path)
 
 
