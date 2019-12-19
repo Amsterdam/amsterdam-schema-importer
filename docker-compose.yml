@@ -53,7 +53,7 @@ services:
     environment:
       FLASK_APP: web.py
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
-      SCHEMA_REPO_URL: https://schemas.data.amsterdam.nl/datasets/
+      SCHEMA_URL: https://schemas.data.amsterdam.nl/datasets/
       UWSGI_DIE_ON_TERM: "1"
       UWSGI_HARAKIRI: "25"
       UWSGI_HTTP: ":8080"
@@ -81,6 +81,7 @@ services:
     build: ./dynapi
     environment:
       DATABASE_URL: postgres://postgres:@postgres:5432/postgres
+      SCHEMA_URL: https://schemas.data.amsterdam.nl/datasets/
       ROUTES_ROOT_DIR: /data
       URI_PATH_PREFIX: /api/
       UWSGI_DIE_ON_TERM: "1"

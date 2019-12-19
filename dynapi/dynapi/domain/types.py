@@ -1,3 +1,4 @@
+import os
 from dataservices import amsterdam_schema as aschema
 from dataclasses import dataclass
 from dataclasses import field
@@ -8,6 +9,7 @@ from typing import List, Any
 
 from schema_ingest import schema_def_from_url
 
+SCHEMA_URL = os.getenv("SCHEMA_URL")
 
 class Type(aschema.DatasetSchema):
     ID_REF = "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/id"
@@ -26,7 +28,7 @@ class Type(aschema.DatasetSchema):
 
     @classmethod
     def fetch_class_info(cls, root_dir: str, catalog: str, collection: str):
-        schema = schema_def_from_url("https://schemas.data.amsterdam.nl/datasets/", catalog, collection)
+        schema = schema_def_from_url(SCHEMA_URL, catalog, collection)
         type_ = cls(schema)
         primary_name = type_.primary_names[collection]
         properties = [k for k in type_.get_table_by_id(collection)["schema"]["properties"].keys()]
