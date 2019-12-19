@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 setup(
     name="schema_cli",
-    version="0.0.1",
+    version="0.0.2",
     description="Module to use schema code through cli",
     long_description="Module to use schema code through cli",
     author="Jan Murre",

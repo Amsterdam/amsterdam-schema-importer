@@ -63,6 +63,8 @@ services:
       UWSGI_PROCESSES: "4"
       UWSGI_STATIC_MAP: "/static=/static"
       UWSGI_VACUUM: "1"
+    extra_hosts: 
+      - "schemas.data.amsterdam.nl:194.104.80.4"
     ports:
       - "7080:8080"
         #    command:
@@ -78,12 +80,23 @@ services:
   dynapi:
     build: ./dynapi
     environment:
-      - DATABASE_URL=postgres://postgres:@postgres:5432/postgres
-      - ROUTES_ROOT_DIR=/data
-      - URI_PATH_PREFIX=/api/
-        #command:
+      DATABASE_URL: postgres://postgres:@postgres:5432/postgres
+      ROUTES_ROOT_DIR: /data
+      URI_PATH_PREFIX: /api/
+      UWSGI_DIE_ON_TERM: "1"
+      UWSGI_HARAKIRI: "25"
+      UWSGI_HTTP: ":8080"
+      UWSGI_MASTER: "1"
+      UWSGI_MODULE: "dynapi.wsgi:application"
+      UWSGI_OFFLOAD_THREADS: "3"
+      UWSGI_PROCESSES: "4"
+      UWSGI_STATIC_MAP: "/static=/static"
+      UWSGI_VACUUM: "1"
+        #    command:
         #sleep infinity
       #      gunicorn dynapi.wsgi:application -w 1 -b 0.0.0.0:9080
+    extra_hosts: 
+      - "schemas.data.amsterdam.nl:194.104.80.4"
     volumes:
       - ./dynapi:/dynapi
       - ./data:/data

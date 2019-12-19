@@ -3,7 +3,7 @@ from setuptools import find_packages
 
 setup(
     name="schema_db",
-    version="0.0.2",
+    version="0.0.3",
     description="Module to work with Postgres dbs",
     long_description="Module to work with Postgres dbs",
     author="Jan Murre",
