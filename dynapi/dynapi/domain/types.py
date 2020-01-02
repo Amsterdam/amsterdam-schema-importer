@@ -28,7 +28,7 @@ class Type(aschema.DatasetSchema):
         return id_fields and id_fields[0] or None
 
     @classmethod
-    def fetch_class_info(cls, root_dir: str, catalog: str, collection: str):
+    def fetch_class_info(cls, schema_url: str, catalog: str, collection: str):
         schema = schema_def_from_url(SCHEMA_URL, catalog)
         type_ = cls(schema)
         primary_name = type_.primary_names[collection]
@@ -45,13 +45,13 @@ class CollectionRef:
 @dataclass
 class Collection:
     coll_ref: CollectionRef
-    root_dir: str
+    schema_url: str
     primary_name: str = None
     properties: List[Any] = field(default_factory=list)
 
     def __post_init__(self):
         self.primary_name, self.properties = Type.fetch_class_info(
-            self.root_dir, self.coll_ref.catalog, self.coll_ref.collection
+            self.schema_url, self.coll_ref.catalog, self.coll_ref.collection
         )
 
 

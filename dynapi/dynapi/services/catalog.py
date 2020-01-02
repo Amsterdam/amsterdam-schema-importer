@@ -8,16 +8,14 @@ from .. import const
 
 @dataclass
 class CatalogContext:
-    root_dir: str
+    schema_url: str
     db_con_factory: Callable[[None], Any]
 
     def entity_repo(self, catalog_str, collection_str):
-        coll_ref= CollectionRef(catalog_str, collection_str)
-        collection = Collection(coll_ref, self.root_dir)
+        coll_ref = CollectionRef(catalog_str, collection_str)
+        collection = Collection(coll_ref, self.schema_url)
         data_strategy = SQLStrategy(coll_ref, self.db_con_factory)
-        return EntityRepository(
-            collection, self.root_dir, data_strategy
-        )
+        return EntityRepository(collection, data_strategy)
 
 
 @dataclass

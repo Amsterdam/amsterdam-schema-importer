@@ -1,7 +1,6 @@
 """
 Service for generating an OpenAPI spec
 """
-import os
 from dataclasses import dataclass, field, asdict
 import typing
 
@@ -127,7 +126,7 @@ class DataClassToOpenAPI:
 @dataclass
 class OpenAPIContext:
     uri_path_prefix: str
-    root_dir: str
+    schema_url: str
 
     def compose_uri(self, catalog, collection, *optional_elements):
         return "/".join(
@@ -140,9 +139,13 @@ class OpenAPIService:
     context: OpenAPIContext
 
     def _get_types(self) -> typing.Iterator[Type]:
-        # XXX change to use context for schema_url
-        SCHEMA_URL = os.environ.get('SCHEMA_URL')
-        return map(Type, (fetch_schema(s) for s in schema_defs_from_url(SCHEMA_URL).values()))
+        return map(
+            Type,
+            (
+                fetch_schema(s)
+                for s in schema_defs_from_url(self.context.schema_url).values()
+            ),
+        )
 
     def create_openapi_spec(self):
         openapi = OpenAPI(info=Info(title="OpenAPI Amsterdam Schema", version="0.0.1"))

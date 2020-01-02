@@ -11,7 +11,6 @@ from .. import const
 @dataclass
 class EntityRepository:
     collection: Collection
-    root_dir: str
     data_strategy: Any
 
     def list(self, srid=const.DB_SRID, geo_format="geojson", **filter_params):

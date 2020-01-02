@@ -7,7 +7,6 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 
 dsn = os.getenv("DATABASE_URL")
-routes_root_dir = os.getenv("ROUTES_ROOT_DIR")
 
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 if SENTRY_DSN is not None:

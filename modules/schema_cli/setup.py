@@ -18,7 +18,7 @@ setup(
     extras_require={"tests": ["pytest"]},
     entry_points="""
         [console_scripts]
-        schema=schema_cli:main
+        schema=schema_cli:schema
         shape=schema_cli:shape
     """
 )

@@ -1,4 +1,4 @@
-from os import environ
+import os
 import functools
 import csv
 import io
@@ -24,9 +24,9 @@ from .exceptions import InvalidInputException, NotFoundException
 
 api = Blueprint("v1", __name__)
 
-routes_root_dir = environ["ROUTES_ROOT_DIR"]
+SCHEMA_URL = os.getenv("SCHEMA_URL")
 
-uri_path_prefix = environ["URI_PATH_PREFIX"]
+uri_path_prefix = os.getenv("URI_PATH_PREFIX")
 
 
 # XXX instead of explicitly stating multiple
@@ -155,9 +155,9 @@ def db_con_factory():
     return current_app.db.con
 
 
-def make_routes(path):
+def make_routes(schema_url):
 
-    catalog_context = services.CatalogContext(path, db_con_factory)
+    catalog_context = services.CatalogContext(schema_url, db_con_factory)
     catalog_service = services.CatalogService(catalog_context)
 
     api.add_url_rule(
@@ -172,12 +172,12 @@ def make_routes(path):
         functools.partial(handler, catalog_service.list_resources, True),
     )
 
-    oa_context = services.OpenAPIContext(uri_path_prefix, path)
+    oa_context = services.OpenAPIContext(uri_path_prefix, schema_url)
     oa_service = services.OpenAPIService(oa_context)
     api.add_url_rule("/spec", "openapi-spec", oa_service.create_openapi_spec)
 
 
-make_routes(routes_root_dir)
+make_routes(SCHEMA_URL)
 
 
 @api.route("/")
