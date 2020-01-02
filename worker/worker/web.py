@@ -52,7 +52,7 @@ def create_dataset():
 
 @app.route("/<dataset>/<table>/rows", methods=["POST"])
 def add_rows(dataset, table):
-    schema_def = schema_def_from_url(SCHEMA_URL, dataset, table)
+    schema_def = schema_def_from_url(SCHEMA_URL, dataset)
     schema = fetch_schema(schema_def)
     srid = schema["crs"].split(":")[-1]
     dataset_table = schema.get_table_by_id(table)

@@ -13,10 +13,12 @@ setup(
     install_requires=[
         "click",
         "schema_ingest",
+        "shape_convert",
     ],
     extras_require={"tests": ["pytest"]},
     entry_points="""
         [console_scripts]
         schema=schema_cli:main
+        shape=schema_cli:shape
     """
 )

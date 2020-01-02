@@ -1,10 +1,11 @@
 """
 Service for generating an OpenAPI spec
 """
+import os
 from dataclasses import dataclass, field, asdict
 import typing
 
-from dynapi.lib import get_datasets
+from schema_ingest import schema_defs_from_url, fetch_schema
 from dynapi.domain.types import Type
 
 
@@ -139,7 +140,9 @@ class OpenAPIService:
     context: OpenAPIContext
 
     def _get_types(self) -> typing.Iterator[Type]:
-        return map(Type, get_datasets(self.context.root_dir))
+        # XXX change to use context for schema_url
+        SCHEMA_URL = os.environ.get('SCHEMA_URL')
+        return map(Type, (fetch_schema(s) for s in schema_defs_from_url(SCHEMA_URL).values()))
 
     def create_openapi_spec(self):
         openapi = OpenAPI(info=Info(title="OpenAPI Amsterdam Schema", version="0.0.1"))

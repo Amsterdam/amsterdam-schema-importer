@@ -13,17 +13,19 @@ from schema_ingest import (
     fetch_rows,
 )
 
+from shape_convert import convert_shapes_from_zip
+
 DB_URI = os.getenv(
     "DATABASE_URI", "postgresql://postgres:postgres@localhost:5434/postgres"
 )
 
 
 @click.group()
-def main():
+def schema():
     pass
 
 
-@main.group()
+@schema.group()
 def ingest():
     pass
 
@@ -60,3 +62,14 @@ def records(dataset_table_name, schema_path, ndjson_path, dry_run):
             create_rows(schema, dataset_table, data, connection)
     else:
         print(fetch_row_insert_stmts(schema, dataset_table, data))
+
+
+@click.group()
+def shape():
+    pass
+
+
+@shape.command()
+@click.argument("shape_zip_path")
+def convert(shape_zip_path):
+    convert_shapes_from_zip(shape_zip_path)

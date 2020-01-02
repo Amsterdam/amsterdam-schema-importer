@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-from collections import defaultdict
 from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
 import jsonschema
@@ -36,23 +35,23 @@ def fetch_rows(fh, srid):
 
 
 def schema_defs_from_url(schemas_url):
-    schema_lookup = defaultdict(dict)
+    schema_lookup = {}
     response = requests.get(schemas_url)
     response.raise_for_status()
     for schema_dir_info in response.json():
-        cur_ds_name = schema_dir_info["name"]
-        response = requests.get(f"{schemas_url}{cur_ds_name}/")
+        schema_dir_name = schema_dir_info["name"]
+        response = requests.get(f"{schemas_url}{schema_dir_name}/")
         response.raise_for_status()
         for schema_file_info in response.json():
-            cur_table_name = schema_file_info["name"]
-            response = requests.get(f"{schemas_url}{cur_ds_name}/{cur_table_name}")
+            schema_name = schema_file_info["name"]
+            response = requests.get(f"{schemas_url}{schema_dir_name}/{schema_name}")
             response.raise_for_status()
-            schema_lookup[cur_ds_name][cur_table_name] = response.json()
+            schema_lookup[schema_name] = response.json()
     return schema_lookup
 
 
-def schema_def_from_url(schemas_url, dataset_name, table_name):
-    return schema_defs_from_url(schemas_url)[dataset_name][table_name]
+def schema_def_from_url(schemas_url, schema_name):
+    return schema_defs_from_url(schemas_url)[schema_name]
 
 
 def fetch_schema(schema_def):
