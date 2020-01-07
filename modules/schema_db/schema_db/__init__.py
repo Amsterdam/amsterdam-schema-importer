@@ -3,7 +3,7 @@ import typing
 from dataclasses import dataclass
 import functools
 from sqlalchemy import Table, Column, create_engine, MetaData, sql
-from sqlalchemy import String, Integer, Float
+from sqlalchemy import String, Integer, Float, Boolean
 from geoalchemy2 import Geometry
 from sqlalchemy.schema import CreateTable
 
@@ -14,12 +14,14 @@ from dataservices.amsterdam_schema import DatasetSchema, DatasetTableSchema
 
 JSON_TYPE_TO_PG = {
     "string": String,
+    "boolean": Boolean,
     "integer": Integer,
     "number": Float,
     "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/id": String,
     "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/class": String,
     "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/dataset": String,
     "https://geojson.org/schema/Geometry.json": Geometry(geometry_type="GEOMETRY", srid=28992),
+    "https://geojson.org/schema/Point.json": Geometry(geometry_type="POINT", srid=28992),
 }
 
 

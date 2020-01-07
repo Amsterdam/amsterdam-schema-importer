@@ -59,9 +59,11 @@ def fetch_schema(schema_def):
 
 
 def fetch_table_create_stmts(schema):
+    create_stmts = []
     for dataset_table in schema.tables:
         db_table = DBTable.from_dataset_table(metadata, schema, dataset_table)
-    return str(CreateTable(db_table.pg_table))
+        create_stmts.append(str(CreateTable(db_table.pg_table)))
+    return ";\n".join(create_stmts)
 
 
 def fetch_row_insert_stmts(schema, dataset_table, data):
@@ -90,7 +92,7 @@ def set_grants(schema, connection):
 def create_rows(schema, dataset_table, data, connection):
     db_table = DBTable.from_dataset_table(metadata, schema, dataset_table)
     # XXX Validation crashes on null values
-    # Extend to ["string", nulll] types
+    # Extend to ["string", null] types
     if False:
         for row in data:
             try:
