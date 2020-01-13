@@ -1,20 +1,10 @@
-import os
-import json
-import requests
 from sqlalchemy import MetaData
 from sqlalchemy.schema import CreateTable
 import jsonschema
 import ndjson
 # from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
-from dataservices.amsterdam_schema import DatasetSchema
 from schema_db import DBTable
-
-
-# DB_URI = os.getenv("DATABASE_URI", "postgresql://postgres:postgres@database/postgres")
-DB_URI = os.getenv(
-    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5435/postgres"
-)
 
 
 # XXX This is the regular approach, a 'global' metadata
@@ -22,40 +12,11 @@ DB_URI = os.getenv(
 metadata = MetaData()
 
 
-def schema_def_from_path(schema_path):
-    with open(schema_path) as fh:
-        return json.load(fh)
-
-
 def fetch_rows(fh, srid):
     data = ndjson.load(fh)
     for row in data:
         row["geometry"] = f"SRID={srid};{shape(row['geometry']).wkt}"
         yield row
-
-
-def schema_defs_from_url(schemas_url):
-    schema_lookup = {}
-    response = requests.get(schemas_url)
-    response.raise_for_status()
-    for schema_dir_info in response.json():
-        schema_dir_name = schema_dir_info["name"]
-        response = requests.get(f"{schemas_url}{schema_dir_name}/")
-        response.raise_for_status()
-        for schema_file_info in response.json():
-            schema_name = schema_file_info["name"]
-            response = requests.get(f"{schemas_url}{schema_dir_name}/{schema_name}")
-            response.raise_for_status()
-            schema_lookup[schema_name] = response.json()
-    return schema_lookup
-
-
-def schema_def_from_url(schemas_url, schema_name):
-    return schema_defs_from_url(schemas_url)[schema_name]
-
-
-def fetch_schema(schema_def):
-    return DatasetSchema(schema_def)
 
 
 def fetch_table_create_stmts(schema):

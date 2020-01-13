@@ -2,22 +2,20 @@ import os
 import click
 from sqlalchemy import create_engine
 
+from dataservices.amsterdam_schema import schema_def_from_path, fetch_schema
+
 from schema_ingest import (
     create_table,
     set_grants,
     create_rows,
     fetch_table_create_stmts,
     fetch_row_insert_stmts,
-    schema_def_from_path,
-    fetch_schema,
     fetch_rows,
 )
 
 from shape_convert import convert_shapes_from_zip
 
-DB_URI = os.getenv(
-    "DATABASE_URI", "postgresql://postgres:postgres@localhost:5434/postgres"
-)
+DB_URI = os.getenv("DATABASE_URL")
 
 
 @click.group()

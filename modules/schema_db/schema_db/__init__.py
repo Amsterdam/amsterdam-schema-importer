@@ -17,9 +17,10 @@ JSON_TYPE_TO_PG = {
     "boolean": Boolean,
     "integer": Integer,
     "number": Float,
-    "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/id": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/class": String,
-    "https://schemas.data.amsterdam.nl/schema@v1.0#/definitions/dataset": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/id": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/class": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/dataset": String,
+    "https://schemas.data.amsterdam.nl/schema@v1.1.0#/definitions/schema": String,
     "https://geojson.org/schema/Geometry.json": Geometry(geometry_type="GEOMETRY", srid=28992),
     "https://geojson.org/schema/Point.json": Geometry(geometry_type="POINT", srid=28992),
 }

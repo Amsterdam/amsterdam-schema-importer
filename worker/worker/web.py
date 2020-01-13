@@ -5,10 +5,9 @@ from flask import Flask, request
 from sqlalchemy import create_engine
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
+from dataservices.amsterdam_schema import schema_def_from_url, fetch_schema
 
 from schema_ingest import (
-    schema_def_from_url,
-    fetch_schema,
     create_table,
     create_rows,
     fetch_rows,

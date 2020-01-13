@@ -4,6 +4,7 @@ import json
 import typing
 
 import jsonschema
+import requests
 
 from . import refs
 
@@ -82,3 +83,32 @@ class DatasetRow(DatasetType):
     def validate(self, schema: DatasetSchema):
         table = schema.get_table_by_id(self["table"])
         table.validate(self.data)
+
+
+def schema_def_from_path(schema_path):
+    with open(schema_path) as fh:
+        return json.load(fh)
+
+
+def schema_defs_from_url(schemas_url):
+    schema_lookup = {}
+    response = requests.get(schemas_url)
+    response.raise_for_status()
+    for schema_dir_info in response.json():
+        schema_dir_name = schema_dir_info["name"]
+        response = requests.get(f"{schemas_url}{schema_dir_name}/")
+        response.raise_for_status()
+        for schema_file_info in response.json():
+            schema_name = schema_file_info["name"]
+            response = requests.get(f"{schemas_url}{schema_dir_name}/{schema_name}")
+            response.raise_for_status()
+            schema_lookup[schema_name] = response.json()
+    return schema_lookup
+
+
+def schema_def_from_url(schemas_url, schema_name):
+    return schema_defs_from_url(schemas_url)[schema_name]
+
+
+def fetch_schema(schema_def):
+    return DatasetSchema(schema_def)

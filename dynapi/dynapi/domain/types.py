@@ -7,8 +7,6 @@ from dataclasses import InitVar
 
 from typing import List, Any
 
-from schema_ingest import schema_def_from_url
-
 SCHEMA_URL = os.getenv("SCHEMA_URL")
 
 
@@ -29,7 +27,7 @@ class Type(aschema.DatasetSchema):
 
     @classmethod
     def fetch_class_info(cls, schema_url: str, catalog: str, collection: str):
-        schema = schema_def_from_url(SCHEMA_URL, catalog)
+        schema = aschema.schema_def_from_url(SCHEMA_URL, catalog)
         type_ = cls(schema)
         primary_name = type_.primary_names[collection]
         properties = [k for k in type_.get_table_by_id(collection)["schema"]["properties"].keys()]
